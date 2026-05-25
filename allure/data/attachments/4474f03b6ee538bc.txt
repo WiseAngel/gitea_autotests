@@ -1,2 +1,0 @@
-{"screenshot": "screenshots/test_explore_repos_search_returns_results[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:52:25.298593Z"}
-{"screenshot": "screenshots/test_explore_repos_search_returns_results[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:52:59.707651Z"}
