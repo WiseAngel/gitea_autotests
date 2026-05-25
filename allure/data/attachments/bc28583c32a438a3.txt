@@ -1,0 +1,1 @@
+{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:00:40.479027Z"}

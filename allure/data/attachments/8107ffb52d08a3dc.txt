@@ -1,3 +1,0 @@
-{"screenshot": "screenshots/test_explore_repos_search_returns_results[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:58:23.333288Z"}
-{"screenshot": "screenshots/test_explore_repos_search_returns_results[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:58:58.437645Z"}
-{"screenshot": "screenshots/test_explore_repos_search_returns_results[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:33.531952Z"}

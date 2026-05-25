@@ -1,0 +1,3 @@
+{"screenshot": "screenshots/test_authenticated_user_can_sign_in[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:10.275348Z"}
+{"screenshot": "screenshots/test_authenticated_user_can_sign_in[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:19.916859Z"}
+{"screenshot": "screenshots/test_authenticated_user_can_sign_in[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:29.410236Z"}

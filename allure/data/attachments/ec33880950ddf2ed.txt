@@ -1,3 +1,0 @@
-{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:00:06.728653Z"}
-{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:00:15.061212Z"}
-{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:00:23.393677Z"}
