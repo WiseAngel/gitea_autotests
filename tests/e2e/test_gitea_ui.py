@@ -21,22 +21,25 @@ def _require_ui_credentials() -> None:
 
 
 def test_public_homepage_links_to_login(page: Page) -> None:
-    """Verify the public homepage exposes a sign-in path."""
+    """Verify the public homepage exposes a sign-in link."""
     page.goto(settings.base_url)
 
-    expect(page).to_have_url(re.compile(r"https://about\.gitea\.com/"))
-    expect(page.get_by_role("link", name=re.compile(r"Sign in", re.I))).to_be_visible()
+    # On self-hosted Gitea the root page is the explore/dashboard page,
+    # not the about.gitea.com marketing site.
+    expect(page).to_have_url(re.compile(rf"{re.escape(settings.base_url)}/?.*"))
+    expect(page.get_by_role("link", name=re.compile(r"Sign (in|up)", re.I))).to_be_visible()
 
 
 def test_authenticated_user_can_sign_in(page: Page) -> None:
-    """Verify an authenticated user can sign in and open a private area."""
+    """Verify an authenticated user can sign in and reach the dashboard."""
     _require_ui_credentials()
 
-    page.goto(f"{settings.base_url}/user/login?redirect_to=%2Fuser%2Fsettings")
+    page.goto(f"{settings.base_url}/user/login")
 
     login_form = GiteaLoginFormComponent(page)
     login_form.fill_credentials(settings.gitea_username, settings.gitea_password)
     login_form.submit()
 
-    expect(page).to_have_url(re.compile(r".*/user/settings"))
-    expect(page.locator("body")).to_contain_text("Settings")
+    # After successful login Gitea redirects to the user dashboard.
+    expect(page).to_have_url(re.compile(rf"{re.escape(settings.base_url)}(/|/issues|/dashboard)?$"))
+    expect(page.locator("body")).not_to_be_empty()

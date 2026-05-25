@@ -4,8 +4,6 @@ Integration tests that combine Gitea API setup with browser verification.
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from playwright.sync_api import Page, expect
 from src.api.clients import GiteaClient
@@ -52,9 +50,9 @@ async def _delete_repo(owner: str, repo_name: str) -> None:
         response.raise_for_status()
 
 
-def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: str) -> None:
+async def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: str) -> None:
     """Verify a repo created by the API is visible in the browser."""
-    owner, repo_name, issue_title, issue_number = asyncio.run(_seed_public_repo_with_issue(gitea_resource_name))
+    owner, repo_name, issue_title, issue_number = await _seed_public_repo_with_issue(gitea_resource_name)
 
     try:
         page.goto(f"{settings.base_url}/{owner}/{repo_name}")
@@ -63,4 +61,4 @@ def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: st
         page.goto(f"{settings.base_url}/{owner}/{repo_name}/issues/{issue_number}")
         expect(page.locator("body")).to_contain_text(issue_title)
     finally:
-        asyncio.run(_delete_repo(owner, repo_name))
+        await _delete_repo(owner, repo_name)

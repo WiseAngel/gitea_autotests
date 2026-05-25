@@ -126,14 +126,24 @@ def create_issue(client: httpx.Client) -> None:
 def generate_api_token(client: httpx.Client) -> str:
     """Generate a personal access token for the admin user.
 
+    Deletes any existing token with the same name first so that re-runs
+    always produce a fresh token value.
+
     Args:
         client: Authenticated HTTP client.
 
     Returns:
         The generated token string.
     """
+    token_name = "ci-token"
+
+    # Delete existing token if present (idempotent re-runs).
+    del_r = client.delete(f"{API_URL}/users/{ADMIN_USER}/tokens/{token_name}")
+    if del_r.status_code == 204:
+        print(f"Existing token '{token_name}' deleted.")
+
     payload = {
-        "name": "ci-token",
+        "name": token_name,
         "scopes": ["write:issue", "write:repository", "read:user"],
     }
     r = client.post(f"{API_URL}/users/{ADMIN_USER}/tokens", json=payload)
@@ -141,9 +151,8 @@ def generate_api_token(client: httpx.Client) -> str:
         token: str = r.json()["sha1"]
         print(f"API token generated: {token[:8]}...")
         return token
-    # Token may already exist on re-runs; just print a warning.
-    print(f"WARN: generate token returned {r.status_code}: {r.text}", file=sys.stderr)
-    return ""
+    print(f"ERROR: generate token returned {r.status_code}: {r.text}", file=sys.stderr)
+    sys.exit(1)
 
 
 def main() -> None:
