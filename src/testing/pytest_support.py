@@ -11,6 +11,7 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 from typing import Any
 
 import httpx
@@ -66,6 +67,33 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
+
+
+def _skip_if_local_base_url_unavailable() -> None:
+    """Skip UI tests when a local base URL is not running.
+
+    The default `BASE_URL` in local development is sometimes pointed at a
+    local Gitea instance. When that server is not available, Playwright would
+    otherwise fail with a connection error before the test body can run.
+    """
+    parsed = urlparse(settings.base_url)
+    is_localhost = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+    if not is_localhost:
+        return
+
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            response = client.get(settings.base_url)
+            if response.status_code < 500:
+                return
+    except httpx.HTTPError:
+        pytest.skip(f"Local base URL is unavailable: {settings.base_url}")
+
+
+def _is_local_base_url() -> bool:
+    """Return whether the configured base URL points to localhost."""
+    parsed = urlparse(settings.base_url)
+    return parsed.hostname in {"localhost", "127.0.0.1", "::1"}
 
 
 @pytest.fixture(scope="session")
@@ -173,6 +201,30 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> 
         node.rep_teardown = report
 
 
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip UI tests early when a local base URL is unavailable.
+
+    Args:
+        config: Pytest configuration object.
+        items: Collected test items.
+    """
+    del config
+
+    if not _is_local_base_url():
+        return
+
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            response = client.get(settings.base_url)
+            if response.status_code < 500:
+                return
+    except httpx.HTTPError:
+        skip_marker = pytest.mark.skip(reason=f"Local base URL is unavailable: {settings.base_url}")
+        for item in items:
+            if "ui" in item.keywords:
+                item.add_marker(skip_marker)
+
+
 class ComponentExpectations:
     """Reusable ``expect()`` wrappers for UI components."""
 
@@ -236,6 +288,8 @@ def authenticated_page(context: BrowserContext) -> Page:
     """
     if not settings.api_token or not settings.gitea_username:
         pytest.skip("Requires GITEA_USERNAME and API_TOKEN")
+
+    _skip_if_local_base_url_unavailable()
 
     login_url = f"{settings.base_url}/user/login"
     api_url = settings.effective_api_url

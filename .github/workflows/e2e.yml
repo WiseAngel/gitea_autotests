@@ -5,14 +5,40 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
+env:
+  GITEA_ADMIN_USER: testadmin
+  GITEA_ADMIN_PASS: testadmin123
+  GITEA_BASE_URL: http://localhost:3000
+  GITEA_API_URL: http://localhost:3000/api/v1
+
 jobs:
-  e2e-ui:
+  component-tests:
+    name: Component tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox]
-        group: [1, 2]
+
+    services:
+      gitea:
+        image: gitea/gitea:latest
+        ports:
+          - 3000:3000
+        env:
+          GITEA__security__INSTALL_LOCK: "true"
+          GITEA__server__ROOT_URL: http://localhost:3000
+          GITEA__database__DB_TYPE: sqlite3
+          # Create the admin user on first boot.
+          GITEA_ADMIN_USER: testadmin
+          GITEA_ADMIN_PASSWORD: testadmin123
+          GITEA_ADMIN_EMAIL: testadmin@example.com
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3000/api/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +49,7 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Cache pip
+      - name: Cache uv
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
@@ -45,32 +71,130 @@ jobs:
           playwright install ${{ matrix.browser }}
           playwright install-deps ${{ matrix.browser }}
 
-      - name: Run E2E UI tests (${{ matrix.browser }} group ${{ matrix.group }}/2)
+      - name: Seed Gitea instance
+        id: seed
+        run: python scripts/seed_gitea.py
+        env:
+          BASE_URL: ${{ env.GITEA_BASE_URL }}
+          GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
+          GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+
+      - name: Run component tests (${{ matrix.browser }})
         run: >
-          pytest
-          -m "e2e and ui"
+          pytest tests/components/
+          -m "component and ui"
           --browser ${{ matrix.browser }}
-          --splits=2 --group=${{ matrix.group }}
           --alluredir=allure-results
-          --junit-xml=e2e-ui-results-${{ matrix.browser }}-group${{ matrix.group }}.xml
-          --json-report --json-report-file=report-e2e-${{ matrix.browser }}-group${{ matrix.group }}.json
+          --junit-xml=component-results-${{ matrix.browser }}.xml
           --reruns 2 --reruns-delay 3
         env:
-          BASE_URL: https://gitea.com
-          API_BASE_URL: https://gitea.com/api/v1
-          API_TOKEN: ${{ secrets.GITEA_API_TOKEN }}
-          GITEA_USERNAME: ${{ secrets.GITEA_USERNAME }}
-          GITEA_PASSWORD: ${{ secrets.GITEA_PASSWORD }}
+          BASE_URL: ${{ env.GITEA_BASE_URL }}
+          API_BASE_URL: ${{ env.GITEA_API_URL }}
+          GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
+          GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+          API_TOKEN: ${{ steps.seed.outputs.api_token }}
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-ui-artifacts-${{ matrix.browser }}-group${{ matrix.group }}
+          name: component-artifacts-${{ matrix.browser }}
           path: |
             allure-results/
-            e2e-ui-results-${{ matrix.browser }}-group${{ matrix.group }}.xml
-            report-e2e-${{ matrix.browser }}-group${{ matrix.group }}.json
-            playwright-report/
+            component-results-${{ matrix.browser }}.xml
+            screenshots/
+          retention-days: 7
+
+  e2e-ui:
+    name: E2E UI tests (${{ matrix.browser }} shard ${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+        shard: [1, 2]
+
+    services:
+      gitea:
+        image: gitea/gitea:latest
+        ports:
+          - 3000:3000
+        env:
+          GITEA__security__INSTALL_LOCK: "true"
+          GITEA__server__ROOT_URL: http://localhost:3000
+          GITEA__database__DB_TYPE: sqlite3
+          GITEA_ADMIN_USER: testadmin
+          GITEA_ADMIN_PASSWORD: testadmin123
+          GITEA_ADMIN_EMAIL: testadmin@example.com
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3000/api/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-${{ matrix.browser }}-
+
+      - name: Install Playwright browser
+        run: |
+          playwright install ${{ matrix.browser }}
+          playwright install-deps ${{ matrix.browser }}
+
+      - name: Seed Gitea instance
+        id: seed
+        run: python scripts/seed_gitea.py
+        env:
+          BASE_URL: ${{ env.GITEA_BASE_URL }}
+          GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
+          GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+
+      - name: Run E2E UI tests (${{ matrix.browser }} shard ${{ matrix.shard }}/2)
+        run: >
+          pytest tests/e2e/ tests/integration/
+          -m "ui"
+          --browser ${{ matrix.browser }}
+          --shard=${{ matrix.shard }}/2
+          --alluredir=allure-results
+          --junit-xml=e2e-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
+          --reruns 2 --reruns-delay 3
+        env:
+          BASE_URL: ${{ env.GITEA_BASE_URL }}
+          API_BASE_URL: ${{ env.GITEA_API_URL }}
+          GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
+          GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+          API_TOKEN: ${{ steps.seed.outputs.api_token }}
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts-${{ matrix.browser }}-shard${{ matrix.shard }}
+          path: |
+            allure-results/
+            e2e-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
             screenshots/
           retention-days: 7

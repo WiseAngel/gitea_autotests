@@ -4,9 +4,8 @@ Component-level UI checks for new Gitea page components.
 Covers: SearchComponent, RepoCardComponent, UserProfileComponent,
 IssueListComponent, IssueFormComponent.
 
-Public-facing assertions run without credentials.
-Authenticated assertions use the ``authenticated_page`` fixture and
-skip automatically when credentials are absent.
+All tests run against a self-hosted Gitea instance (see .github/workflows/e2e.yml).
+The seed script (scripts/seed_gitea.py) creates required data before the test run.
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ import re
 
 import pytest
 from playwright.sync_api import Page, expect
+
 from src.config.settings import settings
 from src.pages.gitea_components import (
     GiteaIssueFormComponent,
@@ -25,6 +25,11 @@ from src.pages.gitea_components import (
 )
 
 pytestmark = [pytest.mark.component, pytest.mark.ui, pytest.mark.smoke]
+
+# Owner of the seed repository created by scripts/seed_gitea.py.
+# Falls back to "testadmin" when GITEA_USERNAME is not set.
+_SEED_OWNER = settings.gitea_username or "testadmin"
+_SEED_REPO = "go-sdk"
 
 # ---------------------------------------------------------------------------
 # SearchComponent
@@ -44,9 +49,9 @@ def test_explore_repos_search_returns_results(page: Page) -> None:
     page.goto(f"{settings.base_url}/explore/repos")
 
     search = GiteaSearchComponent(page)
-    search.search("gitea")
+    search.search(_SEED_REPO)
 
-    expect(page).to_have_url(re.compile(r".*/explore/repos\?.*q=gitea"))
+    expect(page).to_have_url(re.compile(rf".*/explore/repos\?.*q={_SEED_REPO}"))
     expect(page.locator("body")).not_to_be_empty()
 
 
@@ -55,11 +60,11 @@ def test_explore_repos_search_returns_results(page: Page) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_gitea_go_sdk_card_is_visible_on_explore(page: Page) -> None:
-    """Verify a known public repository card appears in explore results."""
-    page.goto(f"{settings.base_url}/explore/repos?q=go-sdk&limit=10")
+def test_seed_repo_card_is_visible_on_explore(page: Page) -> None:
+    """Verify the seeded public repository card appears in explore results."""
+    page.goto(f"{settings.base_url}/explore/repos?q={_SEED_REPO}&limit=10")
 
-    card = GiteaRepoCardComponent(page, "gitea/go-sdk")
+    card = GiteaRepoCardComponent(page, f"{_SEED_OWNER}/{_SEED_REPO}")
     card.expect_visible()
 
 
@@ -69,21 +74,21 @@ def test_gitea_go_sdk_card_is_visible_on_explore(page: Page) -> None:
 
 
 def test_public_user_profile_is_rendered(page: Page) -> None:
-    """Verify the user profile layout renders for a known public Gitea user."""
-    page.goto(f"{settings.base_url}/gitea")
+    """Verify the user profile layout renders for the seed admin user."""
+    page.goto(f"{settings.base_url}/{_SEED_OWNER}")
 
     profile = GiteaUserProfileComponent(page)
     profile.expect_avatar_visible()
 
 
 # ---------------------------------------------------------------------------
-# IssueListComponent  (requires public repo with open issues)
+# IssueListComponent  (seed repo must have at least one open issue)
 # ---------------------------------------------------------------------------
 
 
 def test_issue_list_renders_on_public_repo(page: Page) -> None:
-    """Verify the issue list component is rendered on a public repository."""
-    page.goto(f"{settings.base_url}/gitea/go-sdk/issues")
+    """Verify the issue list component is rendered on the seeded public repo."""
+    page.goto(f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues")
 
     issue_list = GiteaIssueListComponent(page)
     issue_list.expect_visible()
@@ -97,13 +102,11 @@ def test_issue_list_renders_on_public_repo(page: Page) -> None:
 def test_new_issue_form_is_visible_after_login(authenticated_page: Page) -> None:
     """Verify the new-issue form renders for an authenticated user."""
     authenticated_page.goto(
-        f"{settings.base_url}/{settings.gitea_username}/{settings.gitea_username}-qa-demo/issues/new"
+        f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues/new"
     )
 
-    # If the test repo doesn't exist the page will redirect to login or 404.
-    # We only assert the form component structure when we land on the right page.
     if authenticated_page.url.endswith("/issues/new"):
         form = GiteaIssueFormComponent(authenticated_page)
         form.expect_form_visible()
     else:
-        pytest.skip("Demo repo not available; skipping issue form check")
+        pytest.skip("Seed repo not available; skipping issue form check")
