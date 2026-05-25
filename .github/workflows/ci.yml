@@ -1,0 +1,92 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install uv
+        run: pip install uv
+      
+      - name: Create virtual environment
+        run: uv venv
+      
+      - name: Activate virtual environment and install dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
+      
+      - name: Install Playwright browsers
+        run: |
+          source .venv/bin/activate
+          playwright install chromium
+      
+      - name: Install Playwright system dependencies
+        run: |
+          source .venv/bin/activate
+          playwright install-deps chromium
+      
+      - name: Copy environment file
+        run: cp .env.example .env
+      
+      - name: Export environment variables
+        run: |
+          set -a
+          source .env
+          set +a
+          echo "BASE_URL=${BASE_URL}" >> $GITHUB_ENV
+      
+      - name: Run linting
+        run: |
+          source .venv/bin/activate
+          ruff check src tests
+      
+      - name: Run type checking
+        run: |
+          source .venv/bin/activate
+          mypy src
+      
+      - name: Run smoke tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/e2e/test_smoke.py -v --tb=short
+      
+      - name: Run component tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/components/ -v --tb=short
+      
+      - name: Run integration tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/integration/ -v --tb=short
+      
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+      
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: test-results/
+          retention-days: 7

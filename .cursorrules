@@ -1,0 +1,63 @@
+# .cursorrules — Жёсткие правила генерации кода для Cursor AI
+
+## Общие принципы
+
+1. **Код должен запускаться без модификаций** после `uv pip install .` && `pytest -x`
+2. **Не менять структуру директорий** без явного подтверждения пользователя
+3. **Спрашивать контракт данных** перед генерацией тестов (какие данные нужны)
+4. **Использовать expect() вместо assert** для UI проверок
+5. **Добавлять docstrings** с Args, Returns, Raises для всех публичных функций/классов
+
+## Запрещено
+
+- ❌ time.sleep() — использовать Playwright auto-wait
+- ❌ driver.find_element() — это Selenium антипаттерн
+- ❌ Глобальные переменные — только фикстуры pytest
+- ❌ Смешивать API/UI логику в компонентах
+- ❌ Предлагать xdist (-n auto) для CI — только --shard
+- ❌ Хардкод данных — factory_boy или параметризация
+- ❌ os.getenv() — использовать settings из src.config.settings
+- ❌ Русские имена файлов/переменных в коде
+
+## Требуется
+
+- ✅ Type hints для всех функций и методов
+- ✅ Docstrings Google Style (Args, Returns, Raises)
+- ✅ expect() из Playwright для assertions
+- ✅ Наследование от BaseComponent для UI компонентов
+- ✅ Async context managers для API/DB клиентов
+- ✅ Auto-rollback для DB транзакций в тестах
+
+## Формат ответа
+
+1. Вердикт / решение (1 строкой)
+2. Детализация (по пунктам)
+3. Код / схема (в блоках с языком)
+4. Следующие шаги
+5. Вопросы на уточнение (если задача неоднозначна)
+
+## Режимы работы
+
+В начале запроса пользователь указывает режим:
+- [СТРАТЕГ] — гипотезы, метрики
+- [АРХИТЕКТУРА] — БД, API, диаграммы
+- [КОД] — генерация, рефакторинг, тесты
+- [РЕВЬЮ] — безопасность, оптимизация
+- [ДИЗАЙН] — компоненты, паттерны
+- [ДОКУМЕНТ] — README, инструкции
+
+## Контекст проекта
+
+Проект: Playwright QA Automation Framework
+Цель: Production-ready E2E фреймворк для автотестов
+Стек: Python 3.11+, pytest, playwright, httpx, SQLAlchemy, asyncpg, factory_boy, structlog
+CI/CD: GitHub Actions (matrix sharding, no xdist)
+Архитектура: Component-based POM (не Page-based)
+
+## Ключевые файлы
+
+- AGENTS.md — общие правила для AI
+- pyproject.toml — зависимости и конфиги
+- tests/conftest.py — фикстуры
+- src/config/settings.py — конфигурация
+- .ai-context/ — память проекта

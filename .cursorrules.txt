@@ -1,0 +1,36 @@
+# PROJECT RULES (PLAYWRIGHT QA FRAMEWORK)
+## ARCHITECTURE
+- Component-based POM: `tests/components/` = UI-виджеты. `tests/e2e/` = бизнес-логика.
+- Запрет глобального состояния. Все данные через `pytest-fixtures` или аргументы.
+- `page`, `context`, `browser` управляются ТОЛЬКО через `pytest-playwright`.
+- API/SQL клиенты в `src/`. В `tests/` только вызовы и ассерты.
+
+## FIXTURES & DATA
+- `scope="session"`: логин, DB-seed, auth-токен.
+- `scope="function"`: каждый тест = чистый `BrowserContext`.
+- Данные: `factory_boy` / `pydantic` модели. Хардкод строк/ID запрещён.
+- Очистка: API rollback / DB-транзакции. UI-очистка = антипаттерн.
+
+## CODING STANDARDS
+- Python 3.11+, `mypy --strict`, `ruff`. Строгая типизация обязательна.
+- UI-ассерты ТОЛЬКО через `expect(locator).to_*()`. `assert` запрещён для UI.
+- Конфиги: `pydantic-settings`. Валидация при `import`.
+- Логирование: `structlog` (JSON в CI).
+- `time.sleep()` запрещён. Только `wait_for()`, `expect()`, `wait_for_load_state()`.
+
+## CI/CD & PARALLELISM
+- Локально: `pytest -n auto`
+- CI: `--shard=${{ matrix.shard }}/${{ matrix.total }}`. `xdist` в CI запрещён (OOM на free-runners).
+- Кэш: `pip`, `playwright-browsers`, `allure-results`.
+- Flaky: `--reruns 2 --reruns-delay 3`. Авто-маркировка через кастомный плагин.
+
+## AI GENERATION RULES
+1. Спрашивай контракт данных/схему ответа перед генерацией.
+2. Не меняй структуру директорий без подтверждения.
+3. При сомнениях: дай 2 варианта с trade-offs.
+4. Всегда добавляй docstring: `Args:`, `Returns:`, `Raises:`.
+5. Код должен запускаться без правок после `uv pip install .` && `pytest -x`.
+6. Если нет типа данных или контракта — НЕ ГЕНЕРИРУЙ.
+
+
+📖 Память проекта хранится в /ai-context/. Используй 04_memory_log.md для фиксации решений, 05_quick_ref.md для форматирования запросов.

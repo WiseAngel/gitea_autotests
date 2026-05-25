@@ -1,0 +1,45 @@
+name: E2E Tests (Demo Site)
+
+on:
+  workflow_dispatch: # Ручной запуск
+  schedule:
+    - cron: '0 2 * * *' # Каждый день в 2:00 UTC
+
+jobs:
+  e2e:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install uv && uv pip install --system .
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run E2E tests with demo site
+        run: >
+          pytest tests/e2e/
+          --browser chromium
+          --alluredir=allure-results
+          --junit-xml=e2e-test-results.xml
+          --reruns 2 --reruns-delay 3
+        env:
+          BASE_URL: "https://demo.playwright.dev/todomvc"
+          API_BASE_URL: "https://jsonplaceholder.typicode.com"
+
+      - name: Upload E2E artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-artifacts
+          path: |
+            allure-results/
+            e2e-test-results.xml
+            playwright-report/
+          retention-days: 7

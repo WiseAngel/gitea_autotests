@@ -1,0 +1,82 @@
+name: API Tests & Linting
+
+on:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main] }
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install uv && uv pip install --system .[dev]
+
+      - name: Run linting
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+          mypy src/
+
+  test:
+    needs: lint
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install uv && uv pip install --system .
+
+      - name: Run API and integration tests
+        run: >
+          pytest tests/
+          --alluredir=allure-results
+          --junit-xml=api-test-results.xml
+          --reruns 2 --reruns-delay 3
+          -m "api"
+        env:
+          API_BASE_URL: "https://jsonplaceholder.typicode.com"
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-artifacts
+          path: |
+            allure-results/
+            api-test-results.xml
+          retention-days: 7
+
+  report:
+    needs: test
+    runs-on: ubuntu-22.04
+    if: always()
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-test-artifacts
+          path: artifacts/
+      
+      - name: Generate Allure Report
+        run: |
+          mkdir -p allure-report
+          echo "API Test Results" > allure-report/index.html
+          echo "Test artifacts collected successfully." >> allure-report/index.html
+      
+      - name: Upload Allure Report
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: allure-report/
