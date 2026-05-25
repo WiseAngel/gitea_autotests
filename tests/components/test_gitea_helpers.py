@@ -1,11 +1,13 @@
 """
-Unit tests for Gitea helper functions.
+Component-layer tests for Gitea helper functions.
+
+These checks cover lightweight helper logic that previously lived in a separate
+unit layer, but now belongs to the component baseline.
 """
 
 from __future__ import annotations
 
 import pytest
-
 from src.api.gitea import (
     build_api_base_url,
     build_auth_headers,
@@ -17,17 +19,17 @@ from src.api.gitea import (
     normalize_slug,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.component, pytest.mark.api, pytest.mark.smoke]
 
 
 def test_normalize_base_url_trims_trailing_slashes() -> None:
     """Normalize base URLs consistently."""
-    assert normalize_base_url("https://try.gitea.io/") == "https://try.gitea.io"
+    assert normalize_base_url("https://gitea.com/") == "https://gitea.com"
 
 
 def test_build_api_base_url_defaults_to_api_v1() -> None:
     """Derive the Gitea API root from the public URL."""
-    assert build_api_base_url("https://try.gitea.io") == "https://try.gitea.io/api/v1"
+    assert build_api_base_url("https://gitea.com") == "https://gitea.com/api/v1"
 
 
 def test_build_auth_headers_uses_gitea_token_scheme() -> None:
@@ -51,7 +53,7 @@ def test_build_unique_name_is_deterministic_with_entropy() -> None:
 
 def test_build_repo_web_url_uses_public_base_url() -> None:
     """Build a public repository URL."""
-    assert build_repo_web_url("https://try.gitea.io/", "alice", "demo") == "https://try.gitea.io/alice/demo"
+    assert build_repo_web_url("https://gitea.com/", "alice", "demo") == "https://gitea.com/alice/demo"
 
 
 def test_build_repo_payload_contains_expected_fields() -> None:

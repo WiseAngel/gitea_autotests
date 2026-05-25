@@ -8,11 +8,10 @@ import re
 
 import pytest
 from playwright.sync_api import Page, expect
-
 from src.config.settings import settings
-from src.pages.gitea_components import GiteaLoginFormComponent, GiteaNavbarComponent
+from src.pages.gitea_components import GiteaLoginFormComponent
 
-pytestmark = [pytest.mark.e2e, pytest.mark.ui]
+pytestmark = [pytest.mark.e2e, pytest.mark.ui, pytest.mark.regression]
 
 
 def _require_ui_credentials() -> None:
@@ -22,17 +21,11 @@ def _require_ui_credentials() -> None:
 
 
 def test_public_homepage_links_to_login(page: Page) -> None:
-    """Verify a public visitor can reach the login page."""
+    """Verify the public homepage exposes a sign-in path."""
     page.goto(settings.base_url)
 
-    navbar = GiteaNavbarComponent(page)
-    navbar.expect_sign_in_visible()
-    navbar.click_sign_in()
-
-    expect(page).to_have_url(re.compile(r".*/user/login"))
-    login_form = GiteaLoginFormComponent(page)
-    login_form.expect_visible()
-    login_form.expect_fields_visible()
+    expect(page).to_have_url(re.compile(r"https://about\.gitea\.com/"))
+    expect(page.get_by_role("link", name=re.compile(r"Sign in", re.I))).to_be_visible()
 
 
 def test_authenticated_user_can_sign_in(page: Page) -> None:

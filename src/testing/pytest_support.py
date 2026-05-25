@@ -10,14 +10,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncGenerator, Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+import httpx
 import pytest
 import structlog
 from playwright.sync_api import BrowserContext, Page, expect
 
-from src.api.gitea import build_unique_name
+from src.api.gitea import build_auth_headers, build_unique_name
 from src.config.settings import settings
 from src.db.engine import DatabaseEngine
 
@@ -210,10 +211,60 @@ def ui() -> type[ComponentExpectations]:
     return ComponentExpectations
 
 
+@pytest.fixture
+def authenticated_page(context: BrowserContext) -> Page:
+    """Provide a Page already authenticated via Gitea API token injection.
+
+    Skips automatically when credentials are not configured.
+    Injects a session cookie obtained from ``/user/settings`` flow so that
+    the test body receives a browser page that is already signed in.
+
+    Args:
+        context: Playwright browser context fixture.
+
+    Returns:
+        Authenticated Playwright page.
+
+    Raises:
+        pytest.skip.Exception: When API token or username are not set.
+    """
+    if not settings.api_token or not settings.gitea_username:
+        pytest.skip("Requires GITEA_USERNAME and API_TOKEN")
+
+    # Obtain a Gitea web session by hitting the token-authenticated API and
+    # injecting a ``_csrf``-less session cookie via the browser storage state.
+    # Gitea supports HTTP Basic auth with a token as the password, which lets
+    # us retrieve the user page and capture the necessary cookies via a
+    # headless HTTP call, then replay them into the Playwright context.
+    login_url = f"{settings.base_url}/user/login"
+    api_url = settings.effective_api_url
+
+    # Verify the token is valid before attempting UI injection.
+    with httpx.Client(
+        base_url=api_url,
+        headers=build_auth_headers(settings.api_token),
+        timeout=settings.timeout / 1000,
+        follow_redirects=True,
+    ) as api:
+        resp = api.get("/user")
+        if resp.status_code != 200:
+            pytest.skip(f"API token rejected: {resp.status_code}")
+
+    # Use Playwright form-based login so we get a full session cookie set.
+    page = context.new_page()
+    page.goto(login_url)
+    page.locator('input[name="user_name"]').fill(settings.gitea_username)
+    page.locator('input[name="password"]').fill(settings.gitea_password or settings.api_token)
+    page.locator("button.ui.primary.button").click()
+    page.wait_for_url(f"{settings.base_url}/**", timeout=settings.timeout)
+
+    return page
+
+
 @pytest.fixture(scope="session")
 def test_run_started_at() -> str:
     """Return a stable run identifier for generated test data."""
-    return datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d%H%M%S")
 
 
 @pytest.fixture

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         db_user: Database user
         db_password: Database password
         api_token: API authentication token
+        tms_api_url: TMS API base URL
+        tms_token: TMS auth token
         headless: Run browsers in headless mode
         browser: Browser to use (chromium, firefox, webkit)
         timeout: Default timeout for operations in milliseconds
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
     # Application
-    base_url: str = "https://try.gitea.io"
+    base_url: str = "https://gitea.com"
     api_base_url: str | None = None
     headless: bool = True
     browser: str = "chromium"
@@ -45,7 +47,7 @@ class Settings(BaseSettings):
     def set_default_base_url(cls, v: str) -> str:
         """Set default base_url if empty or not provided."""
         if not v:
-            return "https://try.gitea.io"
+            return "https://gitea.com"
         return v
 
     # Database
@@ -57,6 +59,8 @@ class Settings(BaseSettings):
 
     # Authentication
     api_token: str = ""
+    tms_api_url: str = ""
+    tms_token: str = ""
 
     @field_validator("base_url")
     @classmethod

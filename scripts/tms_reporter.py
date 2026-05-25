@@ -15,12 +15,11 @@ Environment Variables:
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
-from xml.etree.ElementTree import Element, ElementTree
 
 import requests
+from src.config.settings import settings
 
 
 def parse_junit_file(path: str) -> list[dict]:
@@ -113,11 +112,11 @@ def sync_to_tms(results: list[dict]) -> bool:
         requests.RequestException: При ошибке сети
         ValueError: Если переменные окружения не настроены
     """
-    tms_api_url = os.getenv("TMS_API_URL")
-    tms_token = os.getenv("TMS_TOKEN")
+    tms_api_url = settings.tms_api_url
+    tms_token = settings.tms_token
 
     if not tms_api_url or not tms_token:
-        print("Error: TMS_API_URL and TMS_TOKEN environment variables are required")
+        print("Error: TMS API settings are required")
         return False
 
     payload = {"test_results": results}

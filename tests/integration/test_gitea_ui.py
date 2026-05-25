@@ -8,12 +8,11 @@ import asyncio
 
 import pytest
 from playwright.sync_api import Page, expect
-
 from src.api.clients import GiteaClient
 from src.api.gitea import build_unique_name
 from src.config.settings import settings
 
-pytestmark = [pytest.mark.integration, pytest.mark.ui]
+pytestmark = [pytest.mark.integration, pytest.mark.ui, pytest.mark.regression]
 
 
 def _require_api_credentials() -> None:

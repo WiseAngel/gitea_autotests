@@ -10,6 +10,8 @@ dependencies = [
     "pytest-playwright>=0.5.0",
     "pytest-xdist>=3.6.0",
     "pytest-rerunfailures>=14.0",
+    "pytest-shard>=0.1.2",
+    "pytest-json-report>=1.5.0",
     "allure-pytest>=2.13.0",
     
     # Config & Validation
@@ -39,7 +41,6 @@ dev = ["ruff>=0.8.0", "mypy>=1.13.0", "pre-commit>=4.0.0"]
 testpaths = ["tests"]
 addopts = "--tb=short --strict-markers --tracing=retain-on-failure"
 markers = [
-    "unit: Pure Python unit tests",
     "component: UI component tests",
     "integration: Cross-layer integration tests",
     "ui: UI-driven tests",

@@ -9,8 +9,8 @@ from typing import Any
 
 import httpx
 
-from src.config.settings import settings
 from src.api.gitea import build_api_base_url, build_auth_headers, build_issue_payload, build_repo_payload
+from src.config.settings import settings
 
 
 class APIClient:

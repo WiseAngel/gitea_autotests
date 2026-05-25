@@ -1,82 +1,76 @@
-name: API Tests & Linting
+name: Gitea E2E UI Regression
 
 on:
-  push: { branches: [main, develop] }
-  pull_request: { branches: [main] }
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
 
 jobs:
-  lint:
-    runs-on: ubuntu-22.04
+  e2e-ui:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
-      - name: Install dependencies
-        run: pip install uv && uv pip install --system .[dev]
 
-      - name: Run linting
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: uv pip install --system ".[dev]"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-${{ matrix.browser }}-
+
+      - name: Install Playwright browser
         run: |
-          ruff check src/ tests/
-          ruff format --check src/ tests/
-          mypy src/
+          playwright install ${{ matrix.browser }}
+          playwright install-deps ${{ matrix.browser }}
 
-  test:
-    needs: lint
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: pip install uv && uv pip install --system .
-
-      - name: Run API and integration tests
+      - name: Run E2E UI tests (${{ matrix.browser }} shard ${{ matrix.shard }}/2)
         run: >
-          pytest tests/
+          pytest
+          -m "e2e and ui"
+          --browser ${{ matrix.browser }}
+          --shard=${{ matrix.shard }}/2
           --alluredir=allure-results
-          --junit-xml=api-test-results.xml
+          --junit-xml=e2e-ui-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
+          --json-report --json-report-file=report-e2e-${{ matrix.browser }}-shard${{ matrix.shard }}.json
           --reruns 2 --reruns-delay 3
-          -m "api"
         env:
-          API_BASE_URL: "https://jsonplaceholder.typicode.com"
+          BASE_URL: https://gitea.com
+          API_BASE_URL: https://gitea.com/api/v1
+          API_TOKEN: ${{ secrets.GITEA_API_TOKEN }}
+          GITEA_USERNAME: ${{ secrets.GITEA_USERNAME }}
+          GITEA_PASSWORD: ${{ secrets.GITEA_PASSWORD }}
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload artifacts
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: api-test-artifacts
+          name: e2e-ui-artifacts-${{ matrix.browser }}-shard${{ matrix.shard }}
           path: |
             allure-results/
-            api-test-results.xml
+            e2e-ui-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
+            report-e2e-${{ matrix.browser }}-shard${{ matrix.shard }}.json
+            playwright-report/
+            screenshots/
           retention-days: 7
-
-  report:
-    needs: test
-    runs-on: ubuntu-22.04
-    if: always()
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/download-artifact@v4
-        with:
-          name: api-test-artifacts
-          path: artifacts/
-      
-      - name: Generate Allure Report
-        run: |
-          mkdir -p allure-report
-          echo "API Test Results" > allure-report/index.html
-          echo "Test artifacts collected successfully." >> allure-report/index.html
-      
-      - name: Upload Allure Report
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: allure-report/

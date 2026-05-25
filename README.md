@@ -1,6 +1,6 @@
 # 🎭 Playwright QA Automation Framework
 
-> Production-ready фреймворк для E2E-тестирования Gitea `try.gitea.io` на базе Playwright, pytest с интеграцией API/DB и полным CI/CD циклом.
+> Production-ready фреймворк для E2E-тестирования Gitea `gitea.com` на базе Playwright, pytest с интеграцией API/DB и полным CI/CD циклом.
 
 ---
 
@@ -36,7 +36,7 @@ uv venv
 uv pip install -e ".[dev]"
 
 # 6. Установите браузеры Playwright
-playwright install chromium
+playwright install chromium firefox
 
 # 7. Скопируйте пример конфигурации
 cp .env.example .env
@@ -50,11 +50,17 @@ cp .env.example .env
 # Все тесты
 pytest
 
-# Только unit/component/integration/e2e слои
-pytest -m unit
+# Только component/integration/e2e слои
 pytest -m component
 pytest -m integration
 pytest -m e2e
+
+# Примеры более точных селекторов
+pytest -m "component and ui"
+pytest -m "integration and api"
+pytest -m "integration and ui"
+pytest -m "e2e and api"
+pytest -m "e2e and ui"
 
 # Только smoke-тесты
 pytest -m smoke
@@ -75,17 +81,16 @@ allure serve allure-results
 ## 🏗 Архитектура
 
 ```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Test Files    │────▶│   Pytest     │────▶│  Playwright │
-│   (e2e/, api/)  │     │  Fixtures    │     │   Browser   │
-└─────────────────┘     └──────────────┘     └─────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        ┌──────────┐   ┌──────────┐   ┌──────────┐
-        │ API      │   │ Database │   │  Test    │
-        │ Clients  │   │ Engine   │   │  Data    │
-        └──────────┘   └──────────┘   └──────────┘
+┌───────────────────────────────┐    ┌──────────────┐    ┌─────────────┐
+│ Test Files                    │───▶│   Pytest     │───▶│ Playwright  │
+│ component / integration / e2e │    │  Fixtures    │    │  Browser    │
+└───────────────────────────────┘    └──────────────┘    └─────────────┘
+                   │                         │                    │
+                   ▼                         ▼                    ▼
+            ┌──────────┐              ┌──────────┐         ┌──────────┐
+            │ API      │              │ Database │         │  Test    │
+            │ Clients  │              │ Engine   │         │  Data    │
+            └──────────┘              └──────────┘         └──────────┘
 ```
 
 **Стек:**
@@ -134,15 +139,16 @@ allure serve allure-results
 │   └── pages/                   # 🧩 Page Object компоненты
 │       └── base_component.py    # Базовый класс для всех компонентов
 ├── tests/                       # 🧪 Тесты
-│   ├── components/              # 🧩 UI компоненты (кнопки, формы, навигация)
-│   │   └── test_components.py   # Тесты компонентов
-│   ├── e2e/                     # 🎬 E2E сценарии
-│   │   └── test_smoke.py        # Smoke тесты
-│   ├── integration/             # 🔗 Интеграционные тесты (API + DB)
-│   │   └── test_integration.py  # Интеграционные тесты
-│   ├── fixtures/                # 🔧 Фабрики данных
-│   │   └── factories.py         # factory_boy фабрики
-│   └── conftest.py              # 📦 Глобальные фикстуры
+│   ├── components/              # 🧩 Component layer (UI + lightweight helpers)
+│   │   ├── test_gitea_components.py
+│   │   └── test_gitea_helpers.py
+│   ├── e2e/                     # 🎬 E2E сценарии (UI + API)
+│   │   ├── test_gitea_ui.py
+│   │   └── test_gitea_api.py
+│   ├── integration/             # 🔗 Integration сценарии (UI + API)
+│   │   ├── test_gitea_api.py
+│   │   └── test_gitea_ui.py
+│   └── conftest.py              # 📦 Глобальные фикстуры (тонкий re-export)
 ├── artifacts/                   # Рабочая площадка (артефакты разработки)
 │   ├── README.md
 │   ├── decisions/               # ADR
@@ -165,7 +171,7 @@ allure serve allure-results
 ### Component-Based POM
 
 ```python
-from tests.components.base_component import BaseComponent
+from src.pages.base_component import BaseComponent
 
 class HeaderComponent(BaseComponent):
     def __init__(self, page):
@@ -189,19 +195,19 @@ def test_navigation(page):
 
 ```python
 from src.api.clients import APIClient
-from tests.fixtures.factories import UserFactory
+from src.testing.factories import GiteaRepositoryFactory
 
 @pytest.mark.asyncio
 async def test_user_flow(page):
     # Создание пользователя через API
-    user_data = UserFactory.build()
+    repo_data = GiteaRepositoryFactory.build()
     
     async with APIClient() as api:
-        response = await api.post("/users", json=user_data)
-        user_id = response.json()["id"]
+        response = await api.post("/user/repos", json=repo_data)
+        repo_name = response.json()["name"]
     
     # Продолжение UI теста с созданным пользователем
-    page.goto(f"/users/{user_id}")
+    page.goto(f"/{settings.gitea_username}/{repo_name}")
 ```
 
 ### DB Transaction Isolation
@@ -255,6 +261,10 @@ def test_login():
     ...
 ```
 
+Если нужна бесплатная TMS для портфолио и будущего продакшена, разумные варианты:
+- [Qase](https://qase.io/) — лучший вариант для portfolio/demo-выгоды
+- [Kiwi TCMS](https://kiwitcms.org/) — лучший вариант для бесплатного self-hosted пути
+
 ---
 
 ## ⚙️ Конфигурация
@@ -263,8 +273,8 @@ def test_login():
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `BASE_URL` | URL Gitea | `https://try.gitea.io` |
-| `API_BASE_URL` | URL API (опционально) | `https://try.gitea.io/api/v1` |
+| `BASE_URL` | URL Gitea | `https://gitea.com` |
+| `API_BASE_URL` | URL API (опционально) | `https://gitea.com/api/v1` |
 | `BROWSER` | Тип браузера | `chromium` |
 | `HEADLESS` | Headless режим | `true` |
 | `TIMEOUT` | Таймаут по умолчанию (мс) | `30000` |

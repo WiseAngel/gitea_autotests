@@ -1,45 +1,70 @@
-name: E2E Tests (Demo Site)
+name: Gitea API Regression
 
 on:
-  workflow_dispatch: # Ручной запуск
+  workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *' # Каждый день в 2:00 UTC
+    - cron: '0 4 * * *'
 
 jobs:
-  e2e:
-    runs-on: ubuntu-22.04
-    
+  lint:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
+      - name: Install uv
+        run: pip install uv
+
       - name: Install dependencies
-        run: pip install uv && uv pip install --system .
+        run: uv pip install --system ".[dev]"
 
-      - name: Install Playwright browsers
-        run: playwright install --with-deps chromium
+      - name: Run linting
+        run: |
+          ruff check src tests scripts
+          ruff format --check src tests scripts
+          mypy src
 
-      - name: Run E2E tests with demo site
+  api:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system ".[dev]"
+
+      - name: Run API regression
         run: >
-          pytest tests/e2e/
-          --browser chromium
+          pytest
+          -m "api and not ui"
           --alluredir=allure-results
-          --junit-xml=e2e-test-results.xml
+          --junit-xml=api-regression-results.xml
           --reruns 2 --reruns-delay 3
         env:
-          BASE_URL: "https://demo.playwright.dev/todomvc"
-          API_BASE_URL: "https://jsonplaceholder.typicode.com"
+          BASE_URL: https://gitea.com
+          API_BASE_URL: https://gitea.com/api/v1
+          API_TOKEN: ${{ secrets.GITEA_API_TOKEN }}
+          GITEA_USERNAME: ${{ secrets.GITEA_USERNAME }}
+          GITEA_PASSWORD: ${{ secrets.GITEA_PASSWORD }}
+          TMS_API_URL: ${{ secrets.TMS_API_URL }}
+          TMS_TOKEN: ${{ secrets.TMS_TOKEN }}
 
-      - name: Upload E2E artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload API artifacts
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-artifacts
+          name: api-regression-artifacts
           path: |
             allure-results/
-            e2e-test-results.xml
-            playwright-report/
+            api-regression-results.xml
           retention-days: 7
