@@ -1,0 +1,2 @@
+{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:45.320436Z"}
+{"screenshot": "screenshots/test_issue_list_renders_on_public_repo[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:53.816952Z"}

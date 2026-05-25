@@ -1,0 +1,1 @@
+{"screenshot": "screenshots/test_seed_repo_card_is_visible_on_explore[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:02.537146Z"}

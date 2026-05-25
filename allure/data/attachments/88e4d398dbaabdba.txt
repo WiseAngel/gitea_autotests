@@ -1,0 +1,1 @@
+{"screenshot": "screenshots/test_seeded_public_repository_is_visible[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:39:27.116237Z"}

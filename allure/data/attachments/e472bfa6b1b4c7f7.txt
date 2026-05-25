@@ -1,0 +1,1 @@
+{"screenshot": "screenshots/test_public_homepage_exposes_sign_in_link[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:38:40.454973Z"}
