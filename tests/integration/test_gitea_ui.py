@@ -29,12 +29,16 @@ async def _seed_public_repo_with_issue(resource_seed: str) -> tuple[str, str, st
     issue_title = build_unique_name("issue", resource_seed)
 
     async with GiteaClient() as client:
-        repo_response = await client.create_repo(repo_name, private=False, auto_init=True, description="UI integration repo")
+        repo_response = await client.create_repo(
+            repo_name, private=False, auto_init=True, description="UI integration repo"
+        )
         repo_response.raise_for_status()
         repo_data = repo_response.json()
         owner = repo_data.get("owner", {}).get("login") or settings.gitea_username
 
-        issue_response = await client.create_issue(owner, repo_name, issue_title, body="Seeded for browser verification")
+        issue_response = await client.create_issue(
+            owner, repo_name, issue_title, body="Seeded for browser verification"
+        )
         issue_response.raise_for_status()
         issue_data = issue_response.json()
 

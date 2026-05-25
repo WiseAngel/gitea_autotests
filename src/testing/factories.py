@@ -86,4 +86,3 @@ class GiteaMilestoneFactory(factory.Factory):
     title = factory.LazyFunction(lambda: fake.sentence(nb_words=4))
     description = factory.LazyAttribute(lambda _: fake.text(max_nb_chars=120))
     deadline = factory.LazyAttribute(lambda _: datetime.utcnow() + timedelta(days=fake.random_int(7, 90)))
-

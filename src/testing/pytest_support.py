@@ -278,4 +278,3 @@ def gitea_resource_name(request: pytest.FixtureRequest) -> str:
         Unique resource name.
     """
     return build_unique_name("qa", request.node.name)
-

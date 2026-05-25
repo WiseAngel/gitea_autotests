@@ -126,9 +126,7 @@ def sync_to_tms(results: list[dict]) -> bool:
     }
 
     try:
-        resp = requests.post(
-            f"{tms_api_url}/api/v1/results", json=payload, headers=headers, timeout=30
-        )
+        resp = requests.post(f"{tms_api_url}/api/v1/results", json=payload, headers=headers, timeout=30)
         resp.raise_for_status()
         print(f"TMS sync completed: {resp.status_code}")
         print(f"Synced {len(results)} test results")
@@ -140,15 +138,9 @@ def sync_to_tms(results: list[dict]) -> bool:
 
 def main() -> int:
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Sync test results from JUnit XML to TMS"
-    )
-    parser.add_argument(
-        "--junit", type=str, help="Path to single JUnit XML file"
-    )
-    parser.add_argument(
-        "--junit-dir", type=str, help="Path to directory with JUnit XML files"
-    )
+    parser = argparse.ArgumentParser(description="Sync test results from JUnit XML to TMS")
+    parser.add_argument("--junit", type=str, help="Path to single JUnit XML file")
+    parser.add_argument("--junit-dir", type=str, help="Path to directory with JUnit XML files")
     args = parser.parse_args()
 
     if not args.junit and not args.junit_dir:
