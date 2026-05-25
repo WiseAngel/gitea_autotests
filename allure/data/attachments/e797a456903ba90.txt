@@ -1,3 +1,0 @@
-{"screenshot": "screenshots/test_authenticated_user_can_sign_in[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:10.373035Z"}
-{"screenshot": "screenshots/test_authenticated_user_can_sign_in[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:19.788560Z"}
-{"screenshot": "screenshots/test_authenticated_user_can_sign_in[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T18:59:29.205759Z"}
