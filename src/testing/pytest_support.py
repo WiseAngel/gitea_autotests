@@ -11,8 +11,8 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
-from urllib.parse import urlparse
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 import pytest

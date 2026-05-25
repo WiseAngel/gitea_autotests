@@ -14,7 +14,6 @@ import re
 
 import pytest
 from playwright.sync_api import Page, expect
-
 from src.config.settings import settings
 from src.pages.gitea_components import (
     GiteaIssueFormComponent,
@@ -101,9 +100,7 @@ def test_issue_list_renders_on_public_repo(page: Page) -> None:
 
 def test_new_issue_form_is_visible_after_login(authenticated_page: Page) -> None:
     """Verify the new-issue form renders for an authenticated user."""
-    authenticated_page.goto(
-        f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues/new"
-    )
+    authenticated_page.goto(f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues/new")
 
     if authenticated_page.url.endswith("/issues/new"):
         form = GiteaIssueFormComponent(authenticated_page)
