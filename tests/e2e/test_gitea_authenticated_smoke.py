@@ -24,8 +24,8 @@ def test_authenticated_user_reaches_dashboard(authenticated_page: Page) -> None:
     """Verify a logged-in user can reach their personal dashboard."""
     authenticated_page.goto(settings.base_url)
 
-    # Authenticated home redirects to /user/dashboard or shows the feed.
-    expect(authenticated_page).to_have_url(re.compile(r"https://gitea\.com/(user/dashboard|$|\?.*)?"))
+    # Authenticated home redirects to /user/dashboard or the feed root.
+    expect(authenticated_page).to_have_url(re.compile(rf"{re.escape(settings.base_url)}(/|/user/dashboard|\?.*)?$"))
     expect(authenticated_page.locator("body")).not_to_be_empty()
 
 

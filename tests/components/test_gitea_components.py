@@ -14,16 +14,20 @@ from src.pages.gitea_components import GiteaLoginFormComponent
 pytestmark = [pytest.mark.component, pytest.mark.ui, pytest.mark.smoke]
 
 
+_SEED_OWNER = settings.gitea_username or "testadmin"
+_SEED_REPO = "go-sdk"
+
+
 def test_public_homepage_exposes_sign_in_link(page: Page) -> None:
-    """Verify the public marketing page exposes a sign-in path."""
+    """Verify the Gitea instance home page exposes a sign-in path."""
     page.goto(settings.base_url)
-    expect(page).to_have_url(re.compile(r"https://about\.gitea\.com/"))
-    expect(page.get_by_role("link", name=re.compile(r"Sign in", re.I))).to_be_visible()
+    expect(page).to_have_url(re.compile(rf"{re.escape(settings.base_url)}/?.*"))
+    expect(page.get_by_role("link", name=re.compile(r"Sign (in|up)", re.I))).to_be_visible()
 
 
 def test_login_form_fields_are_visible(page: Page) -> None:
     """Verify the login form exposes the expected fields."""
-    page.goto(f"{settings.base_url}/user/login?redirect_to=%2Fgitea%2Fgo-sdk%2F_new%2Fmain")
+    page.goto(f"{settings.base_url}/user/login")
 
     login_form = GiteaLoginFormComponent(page)
     login_form.expect_visible()
@@ -32,7 +36,7 @@ def test_login_form_fields_are_visible(page: Page) -> None:
 
 def test_login_form_accepts_credentials_input(page: Page) -> None:
     """Verify the login form accepts user input."""
-    page.goto(f"{settings.base_url}/user/login?redirect_to=%2Fgitea%2Fgo-sdk%2F_new%2Fmain")
+    page.goto(f"{settings.base_url}/user/login")
 
     login_form = GiteaLoginFormComponent(page)
     login_form.fill_credentials("qa-user", "qa-password")

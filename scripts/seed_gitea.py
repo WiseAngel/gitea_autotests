@@ -1,38 +1,37 @@
 """
 Gitea self-hosted instance seed script for CI.
 
-Creates an admin user, a public repository with issues, and a public user
-profile so that component and E2E tests have stable data to assert against.
+Creates a public repository with issues so that component and E2E tests
+have stable data to assert against.
 
 Usage:
     python scripts/seed_gitea.py
 
-Environment variables:
-    BASE_URL        Gitea base URL (default: http://localhost:3000)
-    GITEA_USERNAME  Admin username to create (default: testadmin)
-    GITEA_PASSWORD  Admin password (default: testadmin123)
+Environment variables (all optional, have defaults matching the CI workflow):
+    BASE_URL        Gitea base URL              (default: http://localhost:3000)
+    GITEA_USERNAME  Admin username              (default: testadmin)
+    GITEA_PASSWORD  Admin password              (default: testadmin123)
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 
 import httpx
 
-BASE_URL = "http://localhost:3000"
-ADMIN_USER = "testadmin"
-ADMIN_PASS = "testadmin123"
-ADMIN_EMAIL = "testadmin@example.com"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:3000").rstrip("/")
+ADMIN_USER = os.environ.get("GITEA_USERNAME", "testadmin")
+ADMIN_PASS = os.environ.get("GITEA_PASSWORD", "testadmin123")
+ADMIN_EMAIL = f"{ADMIN_USER}@example.com"
 API_URL = f"{BASE_URL}/api/v1"
 
-# Public "mirror" repo that component tests look for.
-# We create it under the admin user so /testadmin/go-sdk exists.
 SEED_REPO = "go-sdk"
 SEED_ISSUE_TITLE = "Seed issue for CI"
 
 
-def wait_for_gitea(timeout: int = 60) -> None:
+def wait_for_gitea(timeout: int = 90) -> None:
     """Poll until Gitea is accepting HTTP requests.
 
     Args:
@@ -55,35 +54,25 @@ def wait_for_gitea(timeout: int = 60) -> None:
     sys.exit(1)
 
 
-def create_admin(client: httpx.Client) -> None:
-    """Register the admin user via the installation endpoint.
-
-    Gitea exposes a one-time POST /api/v1/admin/self-info that does not
-    require auth only during the *first* install. For fresh containers we
-    use the gitea admin CLI approach via the /api/v1/admin/users endpoint
-    with basic auth from the default internal admin token.
-
-    For simplicity we use the public registration endpoint instead and
-    then promote the user to admin via the env flag GITEA_ADMIN pre-set
-    in the Docker image (see workflow).
+def verify_auth(client: httpx.Client) -> None:
+    """Verify that basic-auth credentials are accepted.
 
     Args:
-        client: HTTP client without auth headers.
+        client: Authenticated HTTP client.
+
+    Raises:
+        SystemExit: If authentication fails.
     """
-    payload = {
-        "username": ADMIN_USER,
-        "password": ADMIN_PASS,
-        "retype": ADMIN_PASS,
-        "email": ADMIN_EMAIL,
-        "must_change_password": False,
-    }
-    r = client.post(f"{API_URL}/admin/users", json=payload)
-    if r.status_code in (200, 201):
-        print(f"Admin user '{ADMIN_USER}' created.")
-    elif r.status_code == 422 and "user already exists" in r.text.lower():
-        print(f"Admin user '{ADMIN_USER}' already exists, skipping.")
-    else:
-        print(f"WARN: create admin returned {r.status_code}: {r.text}", file=sys.stderr)
+    r = client.get(f"{API_URL}/user")
+    if r.status_code == 200:
+        print(f"Authenticated as '{r.json().get('login')}'.")
+        return
+    print(
+        f"ERROR: auth check returned {r.status_code}: {r.text}\n"
+        f"Make sure GITEA_USERNAME={ADMIN_USER} and GITEA_PASSWORD are correct.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def create_repo(client: httpx.Client) -> None:
@@ -134,6 +123,9 @@ def generate_api_token(client: httpx.Client) -> str:
 
     Returns:
         The generated token string.
+
+    Raises:
+        SystemExit: If token generation fails.
     """
     token_name = "ci-token"
 
@@ -155,13 +147,29 @@ def generate_api_token(client: httpx.Client) -> str:
     sys.exit(1)
 
 
+def emit_token(token: str) -> None:
+    """Write the token to GitHub Actions outputs.
+
+    Args:
+        token: The API token value to emit.
+    """
+    # Legacy set-output (still shown in logs for visibility).
+    print(f"::set-output name=api_token::{token}")
+
+    gh_output = os.environ.get("GITHUB_OUTPUT")
+    if gh_output:
+        with open(gh_output, "a") as fh:
+            fh.write(f"api_token={token}\n")
+        print("Token written to GITHUB_OUTPUT.")
+    else:
+        print("WARN: GITHUB_OUTPUT not set; token not persisted for subsequent steps.", file=sys.stderr)
+
+
 def main() -> None:
     """Run the full seed sequence."""
+    print(f"Seeding Gitea at {BASE_URL} as '{ADMIN_USER}'")
     wait_for_gitea()
 
-    # Bootstrap client uses basic auth with the built-in gitea admin.
-    # The gitea Docker image creates an initial admin when GITEA_ADMIN_* env
-    # vars are set (see e2e.yml). We use those creds here.
     with httpx.Client(
         base_url=BASE_URL,
         auth=(ADMIN_USER, ADMIN_PASS),
@@ -169,21 +177,12 @@ def main() -> None:
         timeout=10,
         follow_redirects=True,
     ) as client:
+        verify_auth(client)
         create_repo(client)
         create_issue(client)
         token = generate_api_token(client)
 
-    if token:
-        # Emit as GitHub Actions output so subsequent steps can consume it.
-        print(f"::set-output name=api_token::{token}")
-        # Also write to $GITHUB_OUTPUT if available.
-        import os
-
-        gh_output = os.environ.get("GITHUB_OUTPUT")
-        if gh_output:
-            with open(gh_output, "a") as fh:
-                fh.write(f"api_token={token}\n")
-
+    emit_token(token)
     print("Seed complete.")
 
 
