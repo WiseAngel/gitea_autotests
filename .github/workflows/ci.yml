@@ -64,9 +64,6 @@ jobs:
           GITEA__security__INSTALL_LOCK: "true"
           GITEA__server__ROOT_URL: http://localhost:3000
           GITEA__database__DB_TYPE: sqlite3
-          GITEA_ADMIN_USER: testadmin
-          GITEA_ADMIN_PASSWORD: testadmin123
-          GITEA_ADMIN_EMAIL: testadmin@example.com
         options: >-
           --health-cmd "wget -qO- http://localhost:3000/api/healthz || exit 1"
           --health-interval 5s
@@ -92,6 +89,16 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
+
+      - name: Create Gitea admin user
+        run: |
+          docker exec $(docker ps -q --filter ancestor=gitea/gitea:latest) \
+            gitea admin user create \
+            --username ${{ env.GITEA_ADMIN_USER }} \
+            --password ${{ env.GITEA_ADMIN_PASS }} \
+            --email ${{ env.GITEA_ADMIN_USER }}@example.com \
+            --admin \
+            --must-change-password=false
 
       - name: Seed Gitea instance
         id: seed
@@ -147,9 +154,6 @@ jobs:
           GITEA__security__INSTALL_LOCK: "true"
           GITEA__server__ROOT_URL: http://localhost:3000
           GITEA__database__DB_TYPE: sqlite3
-          GITEA_ADMIN_USER: testadmin
-          GITEA_ADMIN_PASSWORD: testadmin123
-          GITEA_ADMIN_EMAIL: testadmin@example.com
         options: >-
           --health-cmd "wget -qO- http://localhost:3000/api/healthz || exit 1"
           --health-interval 5s
@@ -187,6 +191,16 @@ jobs:
         run: |
           playwright install ${{ matrix.browser }}
           playwright install-deps ${{ matrix.browser }}
+
+      - name: Create Gitea admin user
+        run: |
+          docker exec $(docker ps -q --filter ancestor=gitea/gitea:latest) \
+            gitea admin user create \
+            --username ${{ env.GITEA_ADMIN_USER }} \
+            --password ${{ env.GITEA_ADMIN_PASS }} \
+            --email ${{ env.GITEA_ADMIN_USER }}@example.com \
+            --admin \
+            --must-change-password=false
 
       - name: Seed Gitea instance
         id: seed
