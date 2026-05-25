@@ -1,2 +1,0 @@
-{"screenshot": "screenshots/test_public_homepage_links_to_login[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:38:46.043012Z"}
-{"screenshot": "screenshots/test_public_homepage_links_to_login[firefox].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:38:54.630398Z"}

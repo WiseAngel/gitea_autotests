@@ -1,3 +1,0 @@
-{"screenshot": "screenshots/test_public_user_profile_is_rendered[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:24.513643Z"}
-{"screenshot": "screenshots/test_public_user_profile_is_rendered[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:32.797259Z"}
-{"screenshot": "screenshots/test_public_user_profile_is_rendered[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:41.114291Z"}

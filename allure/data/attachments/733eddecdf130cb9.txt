@@ -1,3 +1,0 @@
-{"screenshot": "screenshots/test_seed_repo_card_is_visible_on_explore[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:02.537146Z"}
-{"screenshot": "screenshots/test_seed_repo_card_is_visible_on_explore[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:10.849553Z"}
-{"screenshot": "screenshots/test_seed_repo_card_is_visible_on_explore[chromium].png", "event": "Test failed", "level": "error", "timestamp": "2026-05-25T19:41:19.182733Z"}
