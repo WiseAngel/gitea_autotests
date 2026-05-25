@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox]
-        shard: [1, 2]
+        group: [1, 2]
     steps:
       - uses: actions/checkout@v4
 
@@ -45,15 +45,15 @@ jobs:
           playwright install ${{ matrix.browser }}
           playwright install-deps ${{ matrix.browser }}
 
-      - name: Run E2E UI tests (${{ matrix.browser }} shard ${{ matrix.shard }}/2)
+      - name: Run E2E UI tests (${{ matrix.browser }} group ${{ matrix.group }}/2)
         run: >
           pytest
           -m "e2e and ui"
           --browser ${{ matrix.browser }}
-          --shard=${{ matrix.shard }}/2
+          --splits=2 --group=${{ matrix.group }}
           --alluredir=allure-results
-          --junit-xml=e2e-ui-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
-          --json-report --json-report-file=report-e2e-${{ matrix.browser }}-shard${{ matrix.shard }}.json
+          --junit-xml=e2e-ui-results-${{ matrix.browser }}-group${{ matrix.group }}.xml
+          --json-report --json-report-file=report-e2e-${{ matrix.browser }}-group${{ matrix.group }}.json
           --reruns 2 --reruns-delay 3
         env:
           BASE_URL: https://gitea.com
@@ -66,11 +66,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-ui-artifacts-${{ matrix.browser }}-shard${{ matrix.shard }}
+          name: e2e-ui-artifacts-${{ matrix.browser }}-group${{ matrix.group }}
           path: |
             allure-results/
-            e2e-ui-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
-            report-e2e-${{ matrix.browser }}-shard${{ matrix.shard }}.json
+            e2e-ui-results-${{ matrix.browser }}-group${{ matrix.group }}.xml
+            report-e2e-${{ matrix.browser }}-group${{ matrix.group }}.json
             playwright-report/
             screenshots/
           retention-days: 7
