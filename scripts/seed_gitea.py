@@ -4,13 +4,19 @@ Gitea self-hosted instance seed script for CI.
 Creates a public repository with issues so that component and E2E tests
 have stable data to assert against.
 
+The admin user and API token are created beforehand via the Gitea CLI
+(see the 'Create Gitea admin' step in the workflow). This script expects
+API_TOKEN to already be set in the environment, or falls back to Basic Auth
+via GITEA_USERNAME + GITEA_PASSWORD.
+
 Usage:
     python scripts/seed_gitea.py
 
-Environment variables (all optional, have defaults matching the CI workflow):
+Environment variables:
     BASE_URL        Gitea base URL              (default: http://localhost:3000)
     GITEA_USERNAME  Admin username              (default: testadmin)
     GITEA_PASSWORD  Admin password              (default: testadmin123)
+    API_TOKEN       Pre-generated API token     (preferred over Basic Auth)
 """
 
 from __future__ import annotations
@@ -24,7 +30,7 @@ import httpx
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:3000").rstrip("/")
 ADMIN_USER = os.environ.get("GITEA_USERNAME", "testadmin")
 ADMIN_PASS = os.environ.get("GITEA_PASSWORD", "testadmin123")
-ADMIN_EMAIL = f"{ADMIN_USER}@example.com"
+API_TOKEN = os.environ.get("API_TOKEN", "")
 API_URL = f"{BASE_URL}/api/v1"
 
 SEED_REPO = "go-sdk"
@@ -54,8 +60,36 @@ def wait_for_gitea(timeout: int = 90) -> None:
     sys.exit(1)
 
 
+def build_client() -> httpx.Client:
+    """Build an authenticated HTTP client.
+
+    Prefers token auth; falls back to Basic Auth.
+
+    Returns:
+        Configured httpx.Client.
+    """
+    headers = {"Content-Type": "application/json"}
+    if API_TOKEN:
+        print(f"Using API token auth (token: {API_TOKEN[:8]}...)")
+        headers["Authorization"] = f"token {API_TOKEN}"
+        return httpx.Client(
+            base_url=BASE_URL,
+            headers=headers,
+            timeout=10,
+            follow_redirects=True,
+        )
+    print(f"Using Basic Auth as '{ADMIN_USER}'")
+    return httpx.Client(
+        base_url=BASE_URL,
+        auth=(ADMIN_USER, ADMIN_PASS),
+        headers=headers,
+        timeout=10,
+        follow_redirects=True,
+    )
+
+
 def verify_auth(client: httpx.Client) -> None:
-    """Verify that basic-auth credentials are accepted.
+    """Verify that credentials are accepted.
 
     Args:
         client: Authenticated HTTP client.
@@ -69,7 +103,7 @@ def verify_auth(client: httpx.Client) -> None:
         return
     print(
         f"ERROR: auth check returned {r.status_code}: {r.text}\n"
-        f"Make sure GITEA_USERNAME={ADMIN_USER} and GITEA_PASSWORD are correct.",
+        f"GITEA_USERNAME={ADMIN_USER}, API_TOKEN={'set' if API_TOKEN else 'not set'}",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -112,57 +146,19 @@ def create_issue(client: httpx.Client) -> None:
         print(f"WARN: create issue returned {r.status_code}: {r.text}", file=sys.stderr)
 
 
-def generate_api_token(client: httpx.Client) -> str:
-    """Generate a personal access token for the admin user.
-
-    Deletes any existing token with the same name first so that re-runs
-    always produce a fresh token value.
-
-    Args:
-        client: Authenticated HTTP client.
-
-    Returns:
-        The generated token string.
-
-    Raises:
-        SystemExit: If token generation fails.
-    """
-    token_name = "ci-token"
-
-    # Delete existing token if present (idempotent re-runs).
-    del_r = client.delete(f"{API_URL}/users/{ADMIN_USER}/tokens/{token_name}")
-    if del_r.status_code == 204:
-        print(f"Existing token '{token_name}' deleted.")
-
-    payload = {
-        "name": token_name,
-        "scopes": ["write:issue", "write:repository", "read:user"],
-    }
-    r = client.post(f"{API_URL}/users/{ADMIN_USER}/tokens", json=payload)
-    if r.status_code in (200, 201):
-        token: str = r.json()["sha1"]
-        print(f"API token generated: {token[:8]}...")
-        return token
-    print(f"ERROR: generate token returned {r.status_code}: {r.text}", file=sys.stderr)
-    sys.exit(1)
-
-
 def emit_token(token: str) -> None:
     """Write the token to GitHub Actions outputs.
 
     Args:
         token: The API token value to emit.
     """
-    # Legacy set-output (still shown in logs for visibility).
-    print(f"::set-output name=api_token::{token}")
-
     gh_output = os.environ.get("GITHUB_OUTPUT")
     if gh_output:
         with open(gh_output, "a") as fh:
             fh.write(f"api_token={token}\n")
-        print("Token written to GITHUB_OUTPUT.")
+        print(f"Token written to GITHUB_OUTPUT (token: {token[:8]}...)")
     else:
-        print("WARN: GITHUB_OUTPUT not set; token not persisted for subsequent steps.", file=sys.stderr)
+        print("WARN: GITHUB_OUTPUT not set; token not persisted.", file=sys.stderr)
 
 
 def main() -> None:
@@ -170,19 +166,15 @@ def main() -> None:
     print(f"Seeding Gitea at {BASE_URL} as '{ADMIN_USER}'")
     wait_for_gitea()
 
-    with httpx.Client(
-        base_url=BASE_URL,
-        auth=(ADMIN_USER, ADMIN_PASS),
-        headers={"Content-Type": "application/json"},
-        timeout=10,
-        follow_redirects=True,
-    ) as client:
+    with build_client() as client:
         verify_auth(client)
         create_repo(client)
         create_issue(client)
-        token = generate_api_token(client)
 
-    emit_token(token)
+    # If token was passed in via env — emit it again for subsequent steps.
+    token = API_TOKEN
+    if token:
+        emit_token(token)
     print("Seed complete.")
 
 

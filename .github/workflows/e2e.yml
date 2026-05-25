@@ -67,23 +67,28 @@ jobs:
           playwright install ${{ matrix.browser }}
           playwright install-deps ${{ matrix.browser }}
 
-      - name: Create Gitea admin user
+      - name: Create Gitea admin user and generate token
+        id: seed
         run: |
-          docker exec $(docker ps -q --filter ancestor=gitea/gitea:latest) \
-            gitea admin user create \
+          GITEA_CTR=$(docker ps -q --filter ancestor=gitea/gitea:latest)
+          docker exec $GITEA_CTR gitea admin user create \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --password ${{ env.GITEA_ADMIN_PASS }} \
             --email ${{ env.GITEA_ADMIN_USER }}@example.com \
-            --admin \
-            --must-change-password=false
+            --admin --must-change-password=false
+          TOKEN=$(docker exec $GITEA_CTR gitea admin user generate-access-token \
+            --username ${{ env.GITEA_ADMIN_USER }} \
+            --token-name ci-token --raw)
+          echo "api_token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "Token generated: ${TOKEN:0:8}..."
 
       - name: Seed Gitea instance
-        id: seed
         run: python scripts/seed_gitea.py
         env:
           BASE_URL: ${{ env.GITEA_BASE_URL }}
           GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+          API_TOKEN: ${{ steps.seed.outputs.api_token }}
 
       - name: Run component tests (${{ matrix.browser }})
         run: >
@@ -167,23 +172,28 @@ jobs:
           playwright install ${{ matrix.browser }}
           playwright install-deps ${{ matrix.browser }}
 
-      - name: Create Gitea admin user
+      - name: Create Gitea admin user and generate token
+        id: seed
         run: |
-          docker exec $(docker ps -q --filter ancestor=gitea/gitea:latest) \
-            gitea admin user create \
+          GITEA_CTR=$(docker ps -q --filter ancestor=gitea/gitea:latest)
+          docker exec $GITEA_CTR gitea admin user create \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --password ${{ env.GITEA_ADMIN_PASS }} \
             --email ${{ env.GITEA_ADMIN_USER }}@example.com \
-            --admin \
-            --must-change-password=false
+            --admin --must-change-password=false
+          TOKEN=$(docker exec $GITEA_CTR gitea admin user generate-access-token \
+            --username ${{ env.GITEA_ADMIN_USER }} \
+            --token-name ci-token --raw)
+          echo "api_token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "Token generated: ${TOKEN:0:8}..."
 
       - name: Seed Gitea instance
-        id: seed
         run: python scripts/seed_gitea.py
         env:
           BASE_URL: ${{ env.GITEA_BASE_URL }}
           GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+          API_TOKEN: ${{ steps.seed.outputs.api_token }}
 
       - name: Run E2E UI tests (${{ matrix.browser }} group ${{ matrix.shard }}/2)
         run: >
