@@ -94,7 +94,7 @@ async def db_engine() -> AsyncGenerator[DatabaseEngine, None]:
 
 
 @pytest.fixture
-async def db_session(db_engine: DatabaseEngine) -> AsyncGenerator:
+async def db_session(db_engine: DatabaseEngine) -> AsyncGenerator[Any, None]:
     """Create a transaction-scoped DB session with auto-rollback.
 
     Args:
@@ -103,13 +103,17 @@ async def db_session(db_engine: DatabaseEngine) -> AsyncGenerator:
     Yields:
         Database session managed in a rollback-only transaction.
     """
-    async with db_engine.session() as session:
-        try:
-            yield session
-            await session.rollback()
-        except Exception:
-            await session.rollback()
-            raise
+    # db_engine.session() returns an async context manager, not an AsyncGenerator.
+    # We manage entry/exit explicitly to satisfy mypy.
+    session = await db_engine.session().__aenter__()  # type: ignore[attr-defined]
+    try:
+        yield session
+        await session.rollback()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await db_engine.session().__aexit__(None, None, None)  # type: ignore[attr-defined]
 
 
 @pytest.fixture
@@ -127,26 +131,27 @@ def context(context: BrowserContext) -> BrowserContext:
 
 
 @pytest.fixture
-def page(page: Page, request: pytest.FixtureRequest) -> Page:
+def page(page: Page, request: pytest.FixtureRequest) -> Generator[Page, None, None]:
     """Enhance the Playwright page with failure diagnostics.
 
     Args:
         page: Playwright page instance.
         request: Pytest request object.
 
-    Returns:
-        Page instance yielded to the test.
+    Yields:
+        Page instance.
     """
     yield page
 
-    if hasattr(request.node, "rep_call") and request.node.rep_call.failed:
+    node: Any = request.node
+    if hasattr(node, "rep_call") and node.rep_call.failed:
         screenshot_name = f"screenshots/{request.node.name}.png"
         page.screenshot(path=screenshot_name)
         logger.error("Test failed", screenshot=screenshot_name)
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo) -> Any:
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> Any:
     """Capture test outcome for use in fixtures.
 
     Args:
@@ -159,12 +164,13 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo) -> Any:
     outcome = yield
     report = outcome.get_result()
 
+    node: Any = item
     if report.when == "call":
-        item.rep_call = report
+        node.rep_call = report
     elif report.when == "setup":
-        item.rep_setup = report
+        node.rep_setup = report
     elif report.when == "teardown":
-        item.rep_teardown = report
+        node.rep_teardown = report
 
 
 class ComponentExpectations:
@@ -216,8 +222,8 @@ def authenticated_page(context: BrowserContext) -> Page:
     """Provide a Page already authenticated via Gitea API token injection.
 
     Skips automatically when credentials are not configured.
-    Injects a session cookie obtained from ``/user/settings`` flow so that
-    the test body receives a browser page that is already signed in.
+    Uses form-based login so that the test body receives a browser page
+    that is already signed in.
 
     Args:
         context: Playwright browser context fixture.
@@ -231,15 +237,9 @@ def authenticated_page(context: BrowserContext) -> Page:
     if not settings.api_token or not settings.gitea_username:
         pytest.skip("Requires GITEA_USERNAME and API_TOKEN")
 
-    # Obtain a Gitea web session by hitting the token-authenticated API and
-    # injecting a ``_csrf``-less session cookie via the browser storage state.
-    # Gitea supports HTTP Basic auth with a token as the password, which lets
-    # us retrieve the user page and capture the necessary cookies via a
-    # headless HTTP call, then replay them into the Playwright context.
     login_url = f"{settings.base_url}/user/login"
     api_url = settings.effective_api_url
 
-    # Verify the token is valid before attempting UI injection.
     with httpx.Client(
         base_url=api_url,
         headers=build_auth_headers(settings.api_token),
@@ -250,7 +250,6 @@ def authenticated_page(context: BrowserContext) -> Page:
         if resp.status_code != 200:
             pytest.skip(f"API token rejected: {resp.status_code}")
 
-    # Use Playwright form-based login so we get a full session cookie set.
     page = context.new_page()
     page.goto(login_url)
     page.locator('input[name="user_name"]').fill(settings.gitea_username)

@@ -69,4 +69,14 @@ disallow_untyped_defs = true
 mypy_path = "."
 packages = ["src"]
 
+# factory-boy has no type stubs — ignore all type errors in factories module
+[[tool.mypy.overrides]]
+module = "src.testing.factories"
+ignore_errors = true
+
+# factory-boy itself has no stubs
+[[tool.mypy.overrides]]
+module = "factory.*"
+ignore_missing_imports = true
+
 # Default env vars are set in conftest.py or .env file

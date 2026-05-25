@@ -188,8 +188,11 @@ jobs:
       - name: Merge allure-results into single directory
         run: |
           mkdir -p allure-results
-          find downloaded-artifacts -type f \( -name "*.json" -o -name "*.xml" -o -name "*.png" \) \
-            -exec cp {} allure-results/ \; || true
+          # Copy only files from allure-results sub-directories (not report.json / junit xml)
+          find downloaded-artifacts -type d -name "allure-results" | while read dir; do
+            cp -r "$dir"/. allure-results/ || true
+          done
+          echo "Allure results count: $(ls allure-results | wc -l)"
 
       - name: Install Allure CLI
         run: |
