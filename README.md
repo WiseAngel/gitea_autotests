@@ -1,6 +1,6 @@
 # 🎭 Playwright QA Automation Framework
 
-> Production-ready фреймворк для E2E-тестирования Gitea `gitea.com` на базе Playwright, pytest с интеграцией API/DB и полным CI/CD циклом.
+> Production-ready фреймворк для E2E-тестирования self-hosted Gitea на базе Playwright, pytest с интеграцией API/DB, Allure и CI/CD.
 
 ---
 
@@ -8,8 +8,8 @@
 
 ### Необходимые требования
 - Python 3.11+
-- Docker & Docker Compose (для CI/CD)
-- Node.js (опционально, для frontend-тестирования)
+- Docker & Docker Compose (для локального Gitea, Postgres и Redis)
+- Node.js (опционально, для генерации Allure-отчёта локально)
 
 ### Установка
 
@@ -92,6 +92,14 @@ allure serve allure-results
             │ Clients  │              │ Engine   │         │  Data    │
             └──────────┘              └──────────┘         └──────────┘
 ```
+
+### Зачем нужен DB-слой
+
+DB-слой используется для изоляции тестовых данных и безопасной подготовки фикстур:
+- `DatabaseEngine` создаёт async SQLAlchemy engine
+- `db_session` даёт транзакцию с auto-rollback
+- тесты могут создавать временные данные, не загрязняя окружение
+- это особенно важно для integration/e2e сценариев, где нужны стабильные предусловия
 
 **Стек:**
 - **Core:** Python 3.11+, pytest + pytest-playwright
@@ -261,9 +269,17 @@ def test_login():
     ...
 ```
 
-Если нужна бесплатная TMS для портфолио и будущего продакшена, разумные варианты:
-- [Qase](https://qase.io/) — лучший вариант для portfolio/demo-выгоды
-- [Kiwi TCMS](https://kiwitcms.org/) — лучший вариант для бесплатного self-hosted пути
+TMS-репортер:
+- читает JUnit XML из CI
+- извлекает `tms_id` из pytest-маркеров на уровне отдельных тестов
+- отправляет результаты в TMS через REST API
+
+Для portfolio/demo-сценария рекомендуем [Qase](https://qase.io/).
+
+Текущий принцип разметки:
+- один тест = один `tms_id`
+- file-level разметка больше не используется
+- IDs должны оставаться стабильными при рефакторинге файла
 
 ---
 

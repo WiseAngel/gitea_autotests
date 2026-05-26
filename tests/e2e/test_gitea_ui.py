@@ -11,7 +11,11 @@ from playwright.sync_api import Page, expect
 from src.config.settings import settings
 from src.pages.gitea_components import GiteaLoginFormComponent
 
-pytestmark = [pytest.mark.e2e, pytest.mark.ui, pytest.mark.regression]
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.ui,
+    pytest.mark.regression,
+]
 
 
 def _require_ui_credentials() -> None:
@@ -20,6 +24,7 @@ def _require_ui_credentials() -> None:
         pytest.skip("Requires Gitea UI username and password")
 
 
+@pytest.mark.tms_id("TC-E2E-001")
 def test_public_homepage_links_to_login(page: Page) -> None:
     """Verify the public homepage exposes a sign-in link."""
     page.goto(settings.base_url)
@@ -30,6 +35,7 @@ def test_public_homepage_links_to_login(page: Page) -> None:
     expect(page.get_by_role("link", name=re.compile(r"Sign (in|up)", re.I))).to_be_visible()
 
 
+@pytest.mark.tms_id("TC-E2E-002")
 def test_authenticated_user_can_sign_in(page: Page) -> None:
     """Verify an authenticated user can sign in and reach the dashboard."""
     _require_ui_credentials()

@@ -11,13 +11,18 @@ from playwright.sync_api import Page, expect
 from src.config.settings import settings
 from src.pages.gitea_components import GiteaLoginFormComponent
 
-pytestmark = [pytest.mark.component, pytest.mark.ui, pytest.mark.smoke]
+pytestmark = [
+    pytest.mark.component,
+    pytest.mark.ui,
+    pytest.mark.smoke,
+]
 
 
 _SEED_OWNER = settings.gitea_username or "testadmin"
 _SEED_REPO = "go-sdk"
 
 
+@pytest.mark.tms_id("TC-COMP-001")
 def test_public_homepage_exposes_sign_in_link(page: Page) -> None:
     """Verify the Gitea instance home page exposes a sign-in path."""
     page.goto(settings.base_url)
@@ -25,6 +30,7 @@ def test_public_homepage_exposes_sign_in_link(page: Page) -> None:
     expect(page.get_by_role("link", name=re.compile(r"Sign (in|up)", re.I))).to_be_visible()
 
 
+@pytest.mark.tms_id("TC-COMP-002")
 def test_login_form_fields_are_visible(page: Page) -> None:
     """Verify the login form exposes the expected fields."""
     page.goto(f"{settings.base_url}/user/login")
@@ -34,6 +40,7 @@ def test_login_form_fields_are_visible(page: Page) -> None:
     login_form.expect_fields_visible()
 
 
+@pytest.mark.tms_id("TC-COMP-003")
 def test_login_form_accepts_credentials_input(page: Page) -> None:
     """Verify the login form accepts user input."""
     page.goto(f"{settings.base_url}/user/login")

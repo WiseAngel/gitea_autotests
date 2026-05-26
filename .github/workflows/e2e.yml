@@ -105,6 +105,14 @@ jobs:
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
           API_TOKEN: ${{ steps.seed.outputs.api_token }}
 
+      - name: Sync component results to TMS
+        if: always()
+        continue-on-error: true
+        run: python scripts/tms_reporter.py --junit component-results-${{ matrix.browser }}.xml
+        env:
+          TMS_API_URL: ${{ secrets.TMS_API_URL }}
+          TMS_TOKEN: ${{ secrets.TMS_TOKEN }}
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -210,6 +218,14 @@ jobs:
           GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
           API_TOKEN: ${{ steps.seed.outputs.api_token }}
+
+      - name: Sync e2e results to TMS
+        if: always()
+        continue-on-error: true
+        run: python scripts/tms_reporter.py --junit e2e-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
+        env:
+          TMS_API_URL: ${{ secrets.TMS_API_URL }}
+          TMS_TOKEN: ${{ secrets.TMS_TOKEN }}
 
       - name: Upload artifacts
         if: always()

@@ -23,7 +23,11 @@ from src.pages.gitea_components import (
     GiteaUserProfileComponent,
 )
 
-pytestmark = [pytest.mark.component, pytest.mark.ui, pytest.mark.smoke]
+pytestmark = [
+    pytest.mark.component,
+    pytest.mark.ui,
+    pytest.mark.smoke,
+]
 
 # Owner of the seed repository created by scripts/seed_gitea.py.
 # Falls back to "testadmin" when GITEA_USERNAME is not set.
@@ -35,6 +39,7 @@ _SEED_REPO = "go-sdk"
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-COMP-012")
 def test_explore_repos_search_input_is_visible(page: Page) -> None:
     """Verify the explore repos search form is rendered on the public page."""
     page.goto(f"{settings.base_url}/explore/repos")
@@ -43,6 +48,7 @@ def test_explore_repos_search_input_is_visible(page: Page) -> None:
     search.expect_input_visible()
 
 
+@pytest.mark.tms_id("TC-COMP-013")
 def test_explore_repos_search_returns_results(page: Page) -> None:
     """Verify that submitting the search form navigates to a filtered list."""
     page.goto(f"{settings.base_url}/explore/repos")
@@ -59,6 +65,7 @@ def test_explore_repos_search_returns_results(page: Page) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-COMP-014")
 def test_seed_repo_card_is_visible_on_explore(page: Page) -> None:
     """Verify the seeded public repository card appears in explore results."""
     page.goto(f"{settings.base_url}/explore/repos?q={_SEED_REPO}&limit=10")
@@ -72,6 +79,7 @@ def test_seed_repo_card_is_visible_on_explore(page: Page) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-COMP-015")
 def test_public_user_profile_is_rendered(page: Page) -> None:
     """Verify the user profile layout renders for the seed admin user."""
     page.goto(f"{settings.base_url}/{_SEED_OWNER}")
@@ -85,6 +93,7 @@ def test_public_user_profile_is_rendered(page: Page) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-COMP-016")
 def test_issue_list_renders_on_public_repo(page: Page) -> None:
     """Verify the issue list component is rendered on the seeded public repo."""
     page.goto(f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues")
@@ -98,6 +107,7 @@ def test_issue_list_renders_on_public_repo(page: Page) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-COMP-017")
 def test_new_issue_form_is_visible_after_login(authenticated_page: Page) -> None:
     """Verify the new-issue form renders for an authenticated user."""
     authenticated_page.goto(f"{settings.base_url}/{_SEED_OWNER}/{_SEED_REPO}/issues/new")

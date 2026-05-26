@@ -10,7 +10,11 @@ from src.api.gitea import build_auth_headers, build_issue_payload, build_repo_pa
 from src.config.settings import settings
 from src.testing.factories import GiteaIssueFactory, GiteaRepositoryFactory
 
-pytestmark = [pytest.mark.e2e, pytest.mark.api, pytest.mark.regression]
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.api,
+    pytest.mark.regression,
+]
 
 
 def _require_api_credentials() -> None:
@@ -87,6 +91,7 @@ def _delete_repo(owner: str, repo_name: str) -> None:
         response.raise_for_status()
 
 
+@pytest.mark.tms_id("TC-E2E-003")
 def test_repository_issue_search_flow() -> None:
     """Verify a complete API-only repository flow."""
     owner, repo_name, _ = _run_repo_flow()

@@ -122,3 +122,51 @@
 - Настроить `PLAYWRIGHT_REPO_URL` + `GITHUB_TOKEN` в `.env` sdet-orchestrator для `/run` через бота
 - После стабилизации CI — добавить TMS интеграцию (Qase рекомендуется для portfolio)
 - Рассмотреть добавление `@pytest.mark.tms_id("TC-XXX")` маркеров к каждому тесту
+
+## Backlog: настройка бота
+
+### Трек 1 — Поднять инфраструктуру бота
+- **Блокер**: Docker Desktop сейчас недоступен на Win10, поэтому бот не может быть запущен локально.
+- **Что нужно сделать**:
+  1. Запустить Docker Desktop
+  2. Создать `docker-compose.yml` в `infra/`
+  3. Создать `.env` из `.env.example`
+  4. Поднять Redis + PostgreSQL через compose
+  5. Выполнить `alembic upgrade head`
+  6. Запустить бот и настроить ngrok для webhook
+
+### Трек 3 — Первый запуск через бота
+- **Сценарий**: `/run → main → staging → smoke`
+- **Ожидаемый результат**:
+  - `passed: ~13`
+  - `failed: 0`
+  - `skipped: ~8`
+- **Цель**: подтвердить, что `sdet-orchestrator` реально умеет запускать Playwright suite и собирать отчётность end-to-end
+
+### Почему это важно
+- Даёт реальную проверку цепочки "бот → запуск → отчёт"
+- Подтверждает, что репозиторий готов не только для CI, но и для внешнего оркестратора
+- Закрывает ключевой portfolio-ready сценарий: запуск автотестов по кнопке из Telegram
+
+## Дополнение: TMS доведён до production-уровня
+
+### Что было сделано после основной CI-сессии
+- `scripts/tms_reporter.py` переведён в production-версию:
+  - добавлен `ExitCode`
+  - добавлен `dry-run` / `verbose`
+  - введён `SyncSummary`
+  - поддержан retry на transient ошибки
+  - payload теперь включает `name`, `nodeid`, `status`, `duration`, `tms_id`
+- Добавлены unit-тесты на:
+  - извлечение TMS ID
+  - парсинг JUnit
+  - dry-run
+  - HTTP send path
+  - config error path
+- TMS-разметка перенесена с file-level на test-level:
+  - один тест = один `tms_id`
+  - file-level маркеры больше не используются
+- `README.md`, `backlog/` и `.cursor/prompts/next-session-bot-integration.md` обновлены под новую модель TMS
+
+### Итог
+- TMS теперь готов не только как черновой канал выгрузки, но и как стабильный компонент отчётности для portfolio/demo сценария

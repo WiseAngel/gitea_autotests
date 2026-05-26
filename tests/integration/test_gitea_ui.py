@@ -17,7 +17,11 @@ from src.api.gitea import (
 )
 from src.config.settings import settings
 
-pytestmark = [pytest.mark.integration, pytest.mark.ui, pytest.mark.regression]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.ui,
+    pytest.mark.regression,
+]
 
 
 def _require_api_credentials() -> None:
@@ -73,6 +77,7 @@ def _delete_repo(owner: str, repo_name: str) -> None:
         response.raise_for_status()
 
 
+@pytest.mark.tms_id("TC-INT-001")
 def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: str) -> None:
     """Verify a repo created by the API is visible in the browser."""
     owner, repo_name, issue_title, issue_number = _seed_public_repo_with_issue(gitea_resource_name)

@@ -20,7 +20,11 @@ from src.testing.factories import (
     GiteaRepositoryFactory,
 )
 
-pytestmark = [pytest.mark.integration, pytest.mark.api, pytest.mark.regression]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.api,
+    pytest.mark.regression,
+]
 
 
 def _require_credentials() -> None:
@@ -75,6 +79,7 @@ def _delete_repo(client: httpx.Client, owner: str, repo: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-INT-006")
 def test_label_lifecycle() -> None:
     """Verify label creation, retrieval, and deletion on a repository."""
     _require_credentials()
@@ -116,6 +121,7 @@ def test_label_lifecycle() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-INT-007")
 def test_milestone_lifecycle() -> None:
     """Verify milestone creation, retrieval, and deletion on a repository."""
     _require_credentials()
@@ -151,6 +157,7 @@ def test_milestone_lifecycle() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.tms_id("TC-INT-008")
 def test_issue_comment_lifecycle() -> None:
     """Verify comment creation, listing, editing, and deletion on an issue."""
     _require_credentials()

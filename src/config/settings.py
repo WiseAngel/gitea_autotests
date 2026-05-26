@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     api_token: str = ""
     tms_api_url: str = ""
     tms_token: str = ""
+    tms_project_code: str = ""
+    tms_run_id: str = ""
 
     @field_validator("base_url")
     @classmethod

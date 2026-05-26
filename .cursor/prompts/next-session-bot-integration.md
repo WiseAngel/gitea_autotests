@@ -138,7 +138,7 @@ Skipped: ~8  (authenticated тесты без password)
    TMS_API_URL=https://api.qase.io/v1
    TMS_TOKEN=<qase-api-key>
    ```
-4. Добавить `@pytest.mark.tms_id("TC-1")` к каждому тесту
+4. Поддерживать `@pytest.mark.tms_id("TC-...")` на уровне отдельных тестов
 5. Доработать `scripts/tms_reporter.py` под Qase API (endpoint: `POST /result/{code}/{id}/bulk`)
 
 ---
@@ -183,4 +183,4 @@ d:\dev\sdet-orchestrator\docs\DOCUMENTATION.md  (раздел 5.1 и 5.3)
 - [ ] Allure отчёт показывает реальные тесты на GitHub Pages
 - [ ] Первый `/run smoke` через бота завершился успешно
 - [ ] Селекторы новых компонентов проверены/исправлены
-- [ ] (Опционально) TMS маркеры добавлены к тестам
+- [ ] TMS маркеры добавлены/поддерживаются на уровне отдельных тестов
