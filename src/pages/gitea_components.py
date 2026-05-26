@@ -18,7 +18,7 @@ class GiteaSearchComponent(BaseComponent):
         Args:
             page: Playwright page instance.
         """
-        super().__init__(page, "body")
+        super().__init__(page, 'form[action="/explore/repos"]')
 
     @property
     def input(self) -> Locator:
@@ -37,7 +37,7 @@ class GiteaSearchComponent(BaseComponent):
             query: Search query string.
         """
         self.input.fill(query)
-        self.submit_button.click()
+        self.input.press("Enter")
 
     def expect_input_visible(self) -> None:
         """Assert the search input is visible."""
