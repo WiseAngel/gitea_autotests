@@ -13,13 +13,13 @@ import json
 import re
 import sys
 import xml.etree.ElementTree as ET
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import requests
-
 from src.config.settings import settings
 
 TMS_ID_PATTERN = re.compile(r"(TC-[A-Z0-9-]+)")
@@ -231,10 +231,9 @@ def sync_to_tms(results: list[TestResult], dry_run: bool = False, verbose: bool 
     if not tms_api_url or not tms_token:
         print("Error: TMS_API_URL and TMS_TOKEN must be configured", file=sys.stderr)
         return False
-    if not tms_project_code or not tms_run_id:
-        if not tms_project_code:
-            print("Error: TMS_PROJECT_CODE must be configured", file=sys.stderr)
-            return False
+    if not tms_project_code:
+        print("Error: TMS_PROJECT_CODE must be configured", file=sys.stderr)
+        return False
 
     summary = _build_summary(results)
     payload = _build_payload(results)
@@ -309,9 +308,9 @@ def main() -> int:
         return ExitCode.CONFIG_ERROR
 
     if args.project_code:
-        setattr(settings, "tms_project_code", args.project_code)
+        settings.tms_project_code = args.project_code
     if args.run_id:
-        setattr(settings, "tms_run_id", args.run_id)
+        settings.tms_run_id = args.run_id
 
     return ExitCode.SUCCESS if sync_to_tms(results, dry_run=args.dry_run, verbose=args.verbose) else ExitCode.API_ERROR
 
