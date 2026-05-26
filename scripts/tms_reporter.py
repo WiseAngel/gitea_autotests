@@ -186,11 +186,7 @@ def _create_run(url: str, headers: dict[str, str], timeout: int) -> int:
     )
     response.raise_for_status()
     data = response.json()
-    run_id = (
-        data.get("result", {}).get("id")
-        or data.get("result", {}).get("run_id")
-        or data.get("id")
-    )
+    run_id = data.get("result", {}).get("id") or data.get("result", {}).get("run_id") or data.get("id")
     if run_id is None:
         raise ValueError(f"Qase run response did not contain an id: {data}")
     return int(run_id)
@@ -209,7 +205,9 @@ def _post_with_retry(
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=timeout)
             if response.status_code >= 500 and attempt < retries:
-                last_exc = requests.HTTPError(f"{response.status_code} Server Error: {response.text}", response=response)
+                last_exc = requests.HTTPError(
+                    f"{response.status_code} Server Error: {response.text}", response=response
+                )
                 continue
             response.raise_for_status()
             return response
@@ -253,10 +251,14 @@ def sync_to_tms(results: list[TestResult], dry_run: bool = False, verbose: bool 
     }
 
     try:
-        run_id = int(tms_run_id) if tms_run_id else _create_run(
-            f"{tms_api_url.rstrip('/')}{DEFAULT_QASE_RUN_PATH.format(code=tms_project_code)}",
-            headers=headers,
-            timeout=DEFAULT_TIMEOUT_SECONDS,
+        run_id = (
+            int(tms_run_id)
+            if tms_run_id
+            else _create_run(
+                f"{tms_api_url.rstrip('/')}{DEFAULT_QASE_RUN_PATH.format(code=tms_project_code)}",
+                headers=headers,
+                timeout=DEFAULT_TIMEOUT_SECONDS,
+            )
         )
         response = _post_with_retry(
             f"{tms_api_url.rstrip('/')}{DEFAULT_QASE_RESULTS_PATH.format(code=tms_project_code, id=run_id)}",
