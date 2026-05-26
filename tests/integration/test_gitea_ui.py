@@ -4,11 +4,15 @@ Integration tests that combine Gitea API setup with browser verification.
 
 from __future__ import annotations
 
+from typing import Any
+
+import httpx
+
 import pytest
 from playwright.sync_api import Page, expect
-from src.api.clients import GiteaClient
-from src.api.gitea import build_unique_name
+from src.api.gitea import build_auth_headers, build_issue_payload, build_repo_payload, build_unique_name
 from src.config.settings import settings
+from src.testing.factories import GiteaIssueFactory
 
 pytestmark = [pytest.mark.integration, pytest.mark.ui, pytest.mark.regression]
 
@@ -19,40 +23,56 @@ def _require_api_credentials() -> None:
         pytest.skip("Requires Gitea API token and username")
 
 
-async def _seed_public_repo_with_issue(resource_seed: str) -> tuple[str, str, str, int]:
+def _api_client() -> httpx.Client:
+    """Create a sync HTTP client for Gitea API calls."""
+    return httpx.Client(
+        base_url=settings.effective_api_url,
+        headers=build_auth_headers(settings.api_token),
+        timeout=settings.timeout / 1000,
+    )
+
+
+def _seed_public_repo_with_issue(resource_seed: str) -> tuple[str, str, str, int]:
     """Create a public repository and one issue for browser verification."""
     _require_api_credentials()
 
     repo_name = build_unique_name("repo", resource_seed)
     issue_title = build_unique_name("issue", resource_seed)
 
-    async with GiteaClient() as client:
-        repo_response = await client.create_repo(
-            repo_name, private=False, auto_init=True, description="UI integration repo"
+    with _api_client() as client:
+        repo_response = client.post(
+            "/user/repos",
+            json=build_repo_payload(
+                repo_name,
+                private=False,
+                auto_init=True,
+                description="UI integration repo",
+            ),
         )
         repo_response.raise_for_status()
-        repo_data = repo_response.json()
+        repo_data: dict[str, Any] = repo_response.json()
         owner = repo_data.get("owner", {}).get("login") or settings.gitea_username
 
-        issue_response = await client.create_issue(
-            owner, repo_name, issue_title, body="Seeded for browser verification"
+        issue_response = client.post(
+            f"/repos/{owner}/{repo_name}/issues",
+            json=build_issue_payload(issue_title, body="Seeded for browser verification"),
         )
         issue_response.raise_for_status()
-        issue_data = issue_response.json()
+        issue_data: dict[str, Any] = issue_response.json()
 
         return owner, repo_name, issue_title, int(issue_data["number"])
 
 
-async def _delete_repo(owner: str, repo_name: str) -> None:
+def _delete_repo(owner: str, repo_name: str) -> None:
     """Delete a repository created for an integration test."""
-    async with GiteaClient() as client:
-        response = await client.delete_repo(owner, repo_name)
+    with _api_client() as client:
+        response = client.delete(f"/repos/{owner}/{repo_name}")
         response.raise_for_status()
 
 
-async def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: str) -> None:
+def test_seeded_public_repository_is_visible(page: Page, gitea_resource_name: str) -> None:
     """Verify a repo created by the API is visible in the browser."""
-    owner, repo_name, issue_title, issue_number = await _seed_public_repo_with_issue(gitea_resource_name)
+    owner, repo_name, issue_title, issue_number = _seed_public_repo_with_issue(gitea_resource_name)
 
     try:
         page.goto(f"{settings.base_url}/{owner}/{repo_name}")
@@ -61,4 +81,4 @@ async def test_seeded_public_repository_is_visible(page: Page, gitea_resource_na
         page.goto(f"{settings.base_url}/{owner}/{repo_name}/issues/{issue_number}")
         expect(page.locator("body")).to_contain_text(issue_title)
     finally:
-        await _delete_repo(owner, repo_name)
+        _delete_repo(owner, repo_name)

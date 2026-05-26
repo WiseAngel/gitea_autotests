@@ -65,6 +65,7 @@ def test_build_repo_payload_contains_expected_fields() -> None:
     assert payload["description"] == "Demo repo"
     assert payload["default_branch"] == "main"
     assert payload["auto_init"] is True
+    assert payload["readme"] == "Default"
 
 
 def test_build_issue_payload_contains_expected_fields() -> None:

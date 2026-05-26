@@ -104,7 +104,7 @@ def build_repo_payload(
     private: bool = False,
     auto_init: bool = True,
     description: str | None = None,
-    readme: bool = True,
+    readme: str | bool | None = "Default",
     default_branch: str | None = None,
 ) -> dict[str, Any]:
     """Build payload for repository creation.
@@ -114,7 +114,7 @@ def build_repo_payload(
         private: Whether the repository should be private.
         auto_init: Whether to initialize the repository with a README.
         description: Optional repository description.
-        readme: Whether to create a README file.
+        readme: README template name or flag used by the Gitea API.
         default_branch: Optional default branch name.
 
     Returns:
@@ -124,8 +124,9 @@ def build_repo_payload(
         "name": name,
         "private": private,
         "auto_init": auto_init,
-        "readme": readme,
     }
+    if readme is not None:
+        payload["readme"] = "Default" if readme is True else readme
     if description is not None:
         payload["description"] = description
     if default_branch is not None:

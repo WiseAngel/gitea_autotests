@@ -155,7 +155,7 @@ class GiteaIssueFormComponent(BaseComponent):
     @property
     def submit_button(self) -> Locator:
         """Get the submit button."""
-        return self._child('button[type="submit"]')
+        return self._child('button:has-text("Create Issue")')
 
     def fill_title(self, title: str) -> None:
         """Fill the issue title field.
