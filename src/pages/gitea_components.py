@@ -18,12 +18,12 @@ class GiteaSearchComponent(BaseComponent):
         Args:
             page: Playwright page instance.
         """
-        super().__init__(page, 'form[action="/explore/repos"]')
+        super().__init__(page, "body")
 
     @property
     def input(self) -> Locator:
         """Get the search input field."""
-        return self._child('input[name="q"]')
+        return self.page.get_by_role("searchbox", name="Search repos")
 
     @property
     def submit_button(self) -> Locator:

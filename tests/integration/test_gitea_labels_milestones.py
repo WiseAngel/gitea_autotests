@@ -94,7 +94,7 @@ def test_label_lifecycle() -> None:
             label_id: int = int(label_data["id"])
 
             assert label_data["name"] == label_payload["name"]
-            assert label_data["color"].lower() == label_payload["color"].lower()
+            assert label_data["color"].lower().lstrip("#") == label_payload["color"].lower().lstrip("#")
 
             list_resp = client.get(f"/repos/{owner}/{repo}/labels")
             list_resp.raise_for_status()
