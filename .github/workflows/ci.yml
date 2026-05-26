@@ -94,12 +94,12 @@ jobs:
         id: seed
         run: |
           GITEA_CTR=$(docker ps -q --filter ancestor=gitea/gitea:latest)
-          docker exec $GITEA_CTR gitea admin user create \
+          docker exec -u git $GITEA_CTR gitea admin user create \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --password ${{ env.GITEA_ADMIN_PASS }} \
             --email ${{ env.GITEA_ADMIN_USER }}@example.com \
             --admin --must-change-password=false
-          TOKEN=$(docker exec $GITEA_CTR gitea admin user generate-access-token \
+          TOKEN=$(docker exec -u git $GITEA_CTR gitea admin user generate-access-token \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --token-name ci-token --raw)
           echo "api_token=$TOKEN" >> $GITHUB_OUTPUT
@@ -201,12 +201,12 @@ jobs:
         id: seed
         run: |
           GITEA_CTR=$(docker ps -q --filter ancestor=gitea/gitea:latest)
-          docker exec $GITEA_CTR gitea admin user create \
+          docker exec -u git $GITEA_CTR gitea admin user create \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --password ${{ env.GITEA_ADMIN_PASS }} \
             --email ${{ env.GITEA_ADMIN_USER }}@example.com \
             --admin --must-change-password=false
-          TOKEN=$(docker exec $GITEA_CTR gitea admin user generate-access-token \
+          TOKEN=$(docker exec -u git $GITEA_CTR gitea admin user generate-access-token \
             --username ${{ env.GITEA_ADMIN_USER }} \
             --token-name ci-token --raw)
           echo "api_token=$TOKEN" >> $GITHUB_OUTPUT
