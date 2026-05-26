@@ -14,8 +14,8 @@ from __future__ import annotations
 import re
 
 import pytest
-from qase.pytest import qase
 from playwright.sync_api import Page, expect
+from qase.pytest import qase
 from src.config.settings import settings
 
 pytestmark = [

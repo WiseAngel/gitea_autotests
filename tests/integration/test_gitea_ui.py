@@ -8,8 +8,8 @@ from typing import Any
 
 import httpx
 import pytest
-from qase.pytest import qase
 from playwright.sync_api import Page, expect
+from qase.pytest import qase
 from src.api.gitea import (
     build_auth_headers,
     build_issue_payload,
