@@ -10,7 +10,12 @@ import httpx
 
 import pytest
 from playwright.sync_api import Page, expect
-from src.api.gitea import build_auth_headers, build_issue_payload, build_repo_payload, build_unique_name
+from src.api.gitea import (
+    build_auth_headers,
+    build_issue_payload,
+    build_repo_payload,
+    build_unique_name,
+)
 from src.config.settings import settings
 
 pytestmark = [pytest.mark.integration, pytest.mark.ui, pytest.mark.regression]
