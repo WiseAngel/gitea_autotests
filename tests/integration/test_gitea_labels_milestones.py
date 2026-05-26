@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 import pytest
+from qase.pytest import qase
 from src.api.gitea import build_auth_headers, build_repo_payload
 from src.config.settings import settings
 from src.testing.factories import (
@@ -79,7 +80,7 @@ def _delete_repo(client: httpx.Client, owner: str, repo: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.tms_id("TC-INT-006")
+@qase.id(30)
 def test_label_lifecycle() -> None:
     """Verify label creation, retrieval, and deletion on a repository."""
     _require_credentials()
@@ -121,7 +122,7 @@ def test_label_lifecycle() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.tms_id("TC-INT-007")
+@qase.id(31)
 def test_milestone_lifecycle() -> None:
     """Verify milestone creation, retrieval, and deletion on a repository."""
     _require_credentials()
@@ -157,7 +158,7 @@ def test_milestone_lifecycle() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.tms_id("TC-INT-008")
+@qase.id(32)
 def test_issue_comment_lifecycle() -> None:
     """Verify comment creation, listing, editing, and deletion on an issue."""
     _require_credentials()

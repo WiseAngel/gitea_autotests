@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from qase.pytest import qase
 from playwright.sync_api import Page, expect
 from src.config.settings import settings
 
@@ -24,7 +25,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.tms_id("TC-E2E-004")
+@qase.id(21)
 def test_authenticated_user_reaches_dashboard(authenticated_page: Page) -> None:
     """Verify a logged-in user can reach their personal dashboard."""
     authenticated_page.goto(settings.base_url)
@@ -34,7 +35,7 @@ def test_authenticated_user_reaches_dashboard(authenticated_page: Page) -> None:
     expect(authenticated_page.locator("body")).not_to_be_empty()
 
 
-@pytest.mark.tms_id("TC-E2E-005")
+@qase.id(22)
 def test_authenticated_user_settings_page_accessible(authenticated_page: Page) -> None:
     """Verify the settings page is accessible for an authenticated user."""
     authenticated_page.goto(f"{settings.base_url}/user/settings")
@@ -43,7 +44,7 @@ def test_authenticated_user_settings_page_accessible(authenticated_page: Page) -
     expect(authenticated_page.locator("body")).to_contain_text("Settings")
 
 
-@pytest.mark.tms_id("TC-E2E-006")
+@qase.id(23)
 def test_authenticated_user_repos_list_accessible(authenticated_page: Page) -> None:
     """Verify the authenticated user can see their repository list."""
     authenticated_page.goto(f"{settings.base_url}/user/settings/repos")
@@ -52,7 +53,7 @@ def test_authenticated_user_repos_list_accessible(authenticated_page: Page) -> N
     expect(authenticated_page.locator("body")).not_to_be_empty()
 
 
-@pytest.mark.tms_id("TC-E2E-007")
+@qase.id(24)
 def test_authenticated_public_profile_visible(authenticated_page: Page) -> None:
     """Verify the user's public profile page is rendered correctly."""
     username = settings.gitea_username

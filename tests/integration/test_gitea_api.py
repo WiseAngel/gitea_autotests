@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 import pytest
+from qase.pytest import qase
 from src.api.gitea import build_auth_headers, build_issue_payload, build_repo_payload
 from src.config.settings import settings
 from src.testing.factories import GiteaIssueFactory, GiteaRepositoryFactory
@@ -79,7 +80,7 @@ def _delete_repo(owner: str, repo_name: str) -> None:
         response.raise_for_status()
 
 
-@pytest.mark.tms_id("TC-INT-002")
+@qase.id(26)
 def test_public_version_endpoint_is_available() -> None:
     """Verify the public API version endpoint responds."""
     version_data = _fetch_api_version()
@@ -88,7 +89,7 @@ def test_public_version_endpoint_is_available() -> None:
     assert version_data["version"]
 
 
-@pytest.mark.tms_id("TC-INT-003")
+@qase.id(27)
 def test_authenticated_user_endpoint_returns_profile() -> None:
     """Verify the authenticated user endpoint returns a profile."""
     _require_api_credentials()
@@ -102,7 +103,7 @@ def test_authenticated_user_endpoint_returns_profile() -> None:
     assert user_data.get("login") or user_data.get("username") or user_data.get("email")
 
 
-@pytest.mark.tms_id("TC-INT-004")
+@qase.id(28)
 def test_authenticated_repo_lifecycle() -> None:
     """Verify repository creation and cleanup through the API."""
     owner, repo_name, repo_data, _ = _create_repo_and_issue()
@@ -113,7 +114,7 @@ def test_authenticated_repo_lifecycle() -> None:
     _delete_repo(owner, repo_name)
 
 
-@pytest.mark.tms_id("TC-INT-005")
+@qase.id(29)
 def test_authenticated_issue_creation() -> None:
     """Verify issue creation in a seeded repository."""
     owner, repo_name, _, issue_data = _create_repo_and_issue()

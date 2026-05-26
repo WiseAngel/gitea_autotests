@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from qase.pytest import qase
 from src.api.gitea import build_auth_headers, build_issue_payload, build_repo_payload
 from src.config.settings import settings
 from src.testing.factories import GiteaIssueFactory, GiteaRepositoryFactory
@@ -91,7 +92,7 @@ def _delete_repo(owner: str, repo_name: str) -> None:
         response.raise_for_status()
 
 
-@pytest.mark.tms_id("TC-E2E-003")
+@qase.id(20)
 def test_repository_issue_search_flow() -> None:
     """Verify a complete API-only repository flow."""
     owner, repo_name, _ = _run_repo_flow()

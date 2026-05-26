@@ -127,14 +127,10 @@ jobs:
           GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
           API_TOKEN: ${{ steps.seed.outputs.api_token }}
-
-      - name: Sync API results to TMS
-        if: always()
-        continue-on-error: true
-        run: python scripts/tms_reporter.py --junit api-results-shard${{ matrix.shard }}.xml
-        env:
-          TMS_API_URL: ${{ secrets.TMS_API_URL }}
-          TMS_TOKEN: ${{ secrets.TMS_TOKEN }}
+          QASE_MODE: testops
+          QASE_TESTOPS_PROJECT: GITEA
+          QASE_TESTOPS_API_TOKEN: ${{ secrets.TMS_TOKEN }}
+          QASE_TESTOPS_RUN_TITLE: API tests shard ${{ matrix.shard }}
 
       - name: Upload API artifacts
         if: always()
@@ -243,14 +239,10 @@ jobs:
           GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
           GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
           API_TOKEN: ${{ steps.seed.outputs.api_token }}
-
-      - name: Sync UI results to TMS
-        if: always()
-        continue-on-error: true
-        run: python scripts/tms_reporter.py --junit ui-results-${{ matrix.browser }}-shard${{ matrix.shard }}.xml
-        env:
-          TMS_API_URL: ${{ secrets.TMS_API_URL }}
-          TMS_TOKEN: ${{ secrets.TMS_TOKEN }}
+          QASE_MODE: testops
+          QASE_TESTOPS_PROJECT: GITEA
+          QASE_TESTOPS_API_TOKEN: ${{ secrets.TMS_TOKEN }}
+          QASE_TESTOPS_RUN_TITLE: UI tests ${{ matrix.browser }} shard ${{ matrix.shard }}
 
       - name: Upload UI artifacts
         if: always()
