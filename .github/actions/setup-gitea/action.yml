@@ -1,0 +1,100 @@
+name: Setup Gitea test environment
+description: >
+  Installs project dependencies (and optionally Playwright browsers), waits for
+  the `gitea` service container to be ready, creates an admin user, generates
+  an API token, and seeds the instance via scripts/seed_gitea.py. Assumes the
+  caller has already run actions/checkout and started a `gitea` service
+  container (see .github/workflows/*.yml for the `services:` block).
+
+inputs:
+  python-version:
+    description: Python version to set up.
+    required: false
+    default: '3.11'
+  install-browser:
+    description: Whether to install a Playwright browser (required for UI tests).
+    required: false
+    default: 'false'
+  browser:
+    description: Playwright browser to install when install-browser is true.
+    required: false
+    default: 'chromium'
+  gitea-admin-user:
+    description: Admin username to create in the Gitea service container.
+    required: false
+    default: testadmin
+  gitea-admin-pass:
+    description: Admin password to create in the Gitea service container.
+    required: false
+    default: testadmin123
+  gitea-base-url:
+    description: Public URL of the Gitea service container.
+    required: false
+    default: http://localhost:3000
+
+outputs:
+  api_token:
+    description: API token generated for the admin user.
+    value: ${{ steps.seed-token.outputs.api_token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      shell: bash
+      run: pip install uv
+
+    - name: Cache uv
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+        restore-keys: uv-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: uv pip install --system -e ".[dev]"
+
+    - name: Cache Playwright browsers
+      if: inputs.install-browser == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ inputs.browser }}-${{ hashFiles('pyproject.toml') }}
+        restore-keys: playwright-${{ runner.os }}-${{ inputs.browser }}-
+
+    - name: Install Playwright browser
+      if: inputs.install-browser == 'true'
+      shell: bash
+      run: |
+        playwright install ${{ inputs.browser }}
+        playwright install-deps ${{ inputs.browser }}
+
+    - name: Create Gitea admin user and generate token
+      id: seed-token
+      shell: bash
+      run: |
+        GITEA_CTR=$(docker ps -q --filter ancestor=gitea/gitea:latest)
+        docker exec -u git "$GITEA_CTR" gitea admin user create \
+          --username "${{ inputs.gitea-admin-user }}" \
+          --password "${{ inputs.gitea-admin-pass }}" \
+          --email "${{ inputs.gitea-admin-user }}@example.com" \
+          --admin --must-change-password=false
+        TOKEN=$(docker exec -u git "$GITEA_CTR" gitea admin user generate-access-token \
+          --username "${{ inputs.gitea-admin-user }}" \
+          --token-name ci-token --raw)
+        echo "api_token=$TOKEN" >> "$GITHUB_OUTPUT"
+        echo "Token generated: ${TOKEN:0:8}..."
+
+    - name: Seed Gitea instance
+      shell: bash
+      run: python scripts/seed_gitea.py
+      env:
+        BASE_URL: ${{ inputs.gitea-base-url }}
+        GITEA_USERNAME: ${{ inputs.gitea-admin-user }}
+        GITEA_PASSWORD: ${{ inputs.gitea-admin-pass }}
+        API_TOKEN: ${{ steps.seed-token.outputs.api_token }}

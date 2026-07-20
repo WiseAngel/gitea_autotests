@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "playwright-qa-framework"
+version = "1.0.0"
+description = "Production-ready E2E automation framework with Playwright, pytest, API/DB integration"
+requires-python = ">=3.11"
+dependencies = [
+    # Core
+    "playwright>=1.49.0",
+    "pytest>=8.3.0",
+    "pytest-playwright>=0.5.0",
+    "pytest-xdist>=3.6.0",
+    "pytest-rerunfailures>=14.0",
+    "pytest-split>=0.9.0",
+    "pytest-json-report>=1.5.0",
+    "qase-pytest>=8.1.0",
+    "allure-pytest>=2.13.0",
+    
+    # Config & Validation
+    "pydantic-settings>=2.6.0",
+    "pydantic>=2.9.0",
+    
+    # API & DB Clients
+    "httpx>=0.28.0",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.30.0",
+    
+    # Test Data
+    "factory-boy>=3.3.0",
+    "faker>=30.0.0",
+    
+    # Logging
+    "structlog>=24.4.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.8.0", "mypy>=1.13.0", "pre-commit>=4.0.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short --strict-markers --tracing=retain-on-failure --import-mode=importlib"
+pythonpath = ["."]
+markers = [
+    "component: UI component tests",
+    "integration: Cross-layer integration tests",
+    "ui: UI-driven tests",
+    "api: API-level tests",
+    "smoke: Quick smoke tests",
+    "regression: Full regression suite",
+    "e2e: End-to-end business scenarios",
+    "flaky: Known flaky tests (auto-retry)",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PT"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+mypy_path = "."
+packages = ["src", "scripts", "tests"]
+
+# factory-boy has no type stubs — ignore all type errors in factories module
+[[tool.mypy.overrides]]
+module = "src.testing.factories"
+ignore_errors = true
+
+# factory-boy itself has no stubs
+[[tool.mypy.overrides]]
+module = "factory.*"
+ignore_missing_imports = true
+
+# qase-pytest and allure-pytest ship no type stubs / py.typed marker
+[[tool.mypy.overrides]]
+module = ["qase.*", "allure.*"]
+ignore_missing_imports = true
+
+# Test modules decorate functions with untyped third-party decorators
+# (@qase.id, @allure.title, @allure.severity) from the packages above.
+# Since those packages ship no py.typed marker, mypy cannot verify the
+# decorators preserve typing; relax that specific strict-mode check for
+# tests only, everything else in strict mode still applies.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+
+# Default env vars are set in conftest.py or .env file

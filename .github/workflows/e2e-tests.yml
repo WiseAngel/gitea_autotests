@@ -1,0 +1,99 @@
+name: Gitea API Regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+
+env:
+  GITEA_ADMIN_USER: testadmin
+  GITEA_ADMIN_PASS: testadmin123
+  GITEA_BASE_URL: http://localhost:3000
+  GITEA_API_URL: http://localhost:3000/api/v1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run linting
+        run: |
+          ruff check src tests scripts
+          ruff format --check src tests scripts
+          mypy
+
+  api:
+    needs: lint
+    runs-on: ubuntu-latest
+
+    services:
+      gitea:
+        image: gitea/gitea:latest
+        ports:
+          - 3000:3000
+        env:
+          GITEA__security__INSTALL_LOCK: "true"
+          GITEA__server__ROOT_URL: http://localhost:3000
+          GITEA__database__DB_TYPE: sqlite3
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3000/api/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Gitea test environment
+        id: setup
+        uses: ./.github/actions/setup-gitea
+        with:
+          gitea-admin-user: ${{ env.GITEA_ADMIN_USER }}
+          gitea-admin-pass: ${{ env.GITEA_ADMIN_PASS }}
+          gitea-base-url: ${{ env.GITEA_BASE_URL }}
+
+      - name: Run API regression
+        run: >
+          pytest
+          -m "api and not ui"
+          --alluredir=allure-results
+          --junit-xml=api-regression-results.xml
+          --reruns 2 --reruns-delay 3
+        env:
+          BASE_URL: ${{ env.GITEA_BASE_URL }}
+          API_BASE_URL: ${{ env.GITEA_API_URL }}
+          GITEA_USERNAME: ${{ env.GITEA_ADMIN_USER }}
+          GITEA_PASSWORD: ${{ env.GITEA_ADMIN_PASS }}
+          API_TOKEN: ${{ steps.setup.outputs.api_token }}
+          QASE_MODE: testops
+          QASE_TESTOPS_PROJECT: GITEA
+          QASE_TESTOPS_API_TOKEN: ${{ secrets.TMS_TOKEN }}
+          QASE_TESTOPS_RUN_TITLE: API regression
+
+      - name: Upload API artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-regression-artifacts
+          path: |
+            allure-results/
+            api-regression-results.xml
+          retention-days: 7
